@@ -30,7 +30,7 @@ void poppulate_next_chars(char *key, int addresses_amount, char *addresses[], bo
         char *address = addresses[i];
         char uppercase_letter = address[key_len] & ~32;
 
-        chars[uppercase_letter - 65] = is_address_matching(key, address);
+        chars[uppercase_letter - 65] = chars[uppercase_letter - 65] | is_address_matching(key, address);
     }
     return;
 }

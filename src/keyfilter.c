@@ -167,8 +167,6 @@ int main(int argc, char *argv[])
         print_parsed_input(key, addresses, addresses_amount);
 
         chars_index = poppulate_next_chars(chars_index, key, addresses_amount, addresses);
-
-        print_chars(chars_index);
     }
     else
     {
@@ -185,9 +183,9 @@ int main(int argc, char *argv[])
         print_parsed_input(key, addresses, addresses_amount);
 
         chars_index = poppulate_next_chars(chars_index, key, addresses_amount, addresses);
-
-        print_chars(chars_index);
     }
+
+    print_chars(chars_index);
 
     return 0;
 }

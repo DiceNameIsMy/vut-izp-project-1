@@ -2,9 +2,96 @@
 #include <string.h>
 #include <stdbool.h>
 
-bool is_lowercase_letter(char c)
+typedef enum address_matches
 {
-    return (c >= 97 && c <= 122);
+    Yes,
+    No,
+    Partly
+} address_matches;
+
+typedef struct character_index
+{
+    int index[16];
+    int amount_of_true;
+} character_index;
+
+character_index new_character_index()
+{
+    character_index chars_idx;
+    chars_idx.amount_of_true = 0;
+
+    for (int i = 0; i < 16; i++)
+    {
+        chars_idx.index[i] = 0;
+    }
+
+    return chars_idx;
+}
+
+character_index allow_char(character_index idx, char c)
+{
+    int array_idx = c / 16;
+    int shift = c % 16;
+
+    int pos = 0b0000000000000001 << shift;
+
+    bool already_set = (idx.index[array_idx] & pos) == pos;
+    if (!already_set)
+    {
+        idx.index[array_idx] |= pos;
+        idx.amount_of_true++;
+    }
+
+    return idx;
+}
+
+void print_chars(character_index idx)
+{
+    int printed_chars = 0;
+
+    printf("ENABLE: ");
+    for (int i = 0; i < 16; i++)
+    {
+        // printf("Byte: %i\n", i);
+        for (int j = 0; j < 16; j++)
+        {
+            if (printed_chars == idx.amount_of_true)
+            {
+                printf("\n");
+                return;
+            }
+            int n = 0b0000000000000001 << j;
+            // printf("Bit: %i, Value: %i\n", n, idx.index[i]);
+            bool should_print = (idx.index[i] & n) == n;
+
+            if (should_print)
+            {
+                // printf("Char to print: %i\n", ((i * 16) + j));
+                printf("%c", (char)((i * 16) + j));
+                printed_chars++;
+            }
+        }
+    }
+    printf("\n");
+}
+
+bool is_lowercase(char c)
+{
+    return (c > 96 && c < 123);
+}
+
+bool is_uppercase(char c)
+{
+    return (c > 64 && c < 91);
+}
+
+char to_uppercase(char c)
+{
+    if (is_lowercase(c))
+    {
+        return c & 223;
+    }
+    return c;
 }
 
 bool is_address_matching(char *key, char *address)
@@ -13,7 +100,7 @@ bool is_address_matching(char *key, char *address)
 
     for (int i = 0; i < key_len; i++)
     {
-        if ((key[i] & ~32) != (address[i] & ~32))
+        if (to_uppercase(key[i]) != to_uppercase(address[i]))
         {
             return false;
         }
@@ -21,32 +108,35 @@ bool is_address_matching(char *key, char *address)
     return true;
 }
 
-void poppulate_next_chars(char *key, int addresses_amount, char *addresses[], bool chars[26])
+character_index poppulate_next_chars(character_index idx, char *key, int addresses_amount, char *addresses[])
 {
     int key_len = strlen(key);
 
     for (int i = 0; i < addresses_amount; i++)
     {
         char *address = addresses[i];
-        char uppercase_letter = address[key_len] & ~32;
+        bool is_match = is_address_matching(key, address);
 
-        chars[uppercase_letter - 65] = chars[uppercase_letter - 65] | is_address_matching(key, address);
-    }
-    return;
-}
-
-void print_chars(bool chars_index[26])
-{
-    printf("Chars: ");
-
-    for (int i = 0; i < 26; i++)
-    {
-        if (chars_index[i])
+        if (is_match)
         {
-            printf("%c", (char)(i + 65));
+            // printf("%c is a match\n", address[key_len]);
+            char next_letter = to_uppercase(address[key_len]);
+
+            idx = allow_char(idx, next_letter);
         }
     }
+    return idx;
+}
 
+void print_parsed_input(char key[], char *addresses[], int addresses_amount)
+{
+    printf("Key: %s\n", key);
+
+    printf("Addresses: ");
+    for (int i = 0; i < addresses_amount; i++)
+    {
+        printf("%s, ", addresses[i]);
+    }
     printf("\n");
 }
 
@@ -58,40 +148,43 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    character_index chars_index = new_character_index();
+
     char first_letter = argv[1][0];
 
-    char *key;
-    bool chars_index[26];
-
-    if (is_lowercase_letter(first_letter))
+    if (is_lowercase(first_letter))
     {
+        char *key = argv[1];
+
         int addresses_amount = argc - 2;
         char *addresses[addresses_amount];
-        int l;
-        for (l = 0; l < addresses_amount; l++)
+
+        for (int i = 0; i < addresses_amount; i++)
         {
-            addresses[l] = argv[l + 2];
+            addresses[i] = argv[i + 2];
         }
 
-        key = argv[1];
+        print_parsed_input(key, addresses, addresses_amount);
 
-        poppulate_next_chars(key, addresses_amount, addresses, chars_index);
+        chars_index = poppulate_next_chars(chars_index, key, addresses_amount, addresses);
 
         print_chars(chars_index);
     }
     else
     {
+        char *key = "";
+
         int addresses_amount = argc - 1;
         char *addresses[addresses_amount];
-        int l;
-        for (l = 0; l < addresses_amount; l++)
+
+        for (int i = 0; i < addresses_amount; i++)
         {
-            addresses[l] = argv[l + 1];
+            addresses[i] = argv[i + 1];
         }
 
-        key = "";
+        print_parsed_input(key, addresses, addresses_amount);
 
-        poppulate_next_chars(key, addresses_amount, addresses, chars_index);
+        chars_index = poppulate_next_chars(chars_index, key, addresses_amount, addresses);
 
         print_chars(chars_index);
     }

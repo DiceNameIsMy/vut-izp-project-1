@@ -31,7 +31,7 @@ char to_uppercase(char c)
 }
 
 // Stores which characters can be unputted next.
-// Each bit in the array of integers represents a character
+// Each bit in the array of nodes represents a character
 // with values: 0 - can't, and 1 - can be included
 typedef struct character_bool_map
 {
@@ -206,6 +206,22 @@ void log_parsed_input(char key[], char *addresses[], int addresses_amount)
     printf("\n");
 }
 
+void print_result(autocomplete_result *result)
+{
+    if (result->no_results)
+    {
+        printf("Not found\n");
+    }
+    else if (result->found_address != NULL)
+    {
+        printf("Found: %s\n", result->found_address);
+    }
+    else
+    {
+        print_next_letters(*result->next_chars_bool_map);
+    }
+}
+
 int main(int argc, char *argv[])
 {
     if (argc == 1)
@@ -214,8 +230,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    character_bool_map chars_index = new_character_bool_map();
-    character_bool_map *chars_index_ptr = &chars_index;
+    character_bool_map chars_map = new_character_bool_map();
+    character_bool_map *chars_map_ptr = &chars_map;
     autocomplete_result result;
 
     char first_letter = argv[1][0];
@@ -236,7 +252,7 @@ int main(int argc, char *argv[])
             log_parsed_input(key, addresses, addresses_amount);
         }
 
-        result = autocomplete(&chars_index_ptr, key, addresses_amount, addresses);
+        result = autocomplete(&chars_map_ptr, key, addresses_amount, addresses);
     }
     else
     {
@@ -254,21 +270,10 @@ int main(int argc, char *argv[])
             log_parsed_input(key, addresses, addresses_amount);
         }
 
-        result = autocomplete(&chars_index_ptr, key, addresses_amount, addresses);
+        result = autocomplete(&chars_map_ptr, key, addresses_amount, addresses);
     }
 
-    if (result.no_results)
-    {
-        printf("Not found\n");
-    }
-    else if (result.found_address != NULL)
-    {
-        printf("Found: %s\n", result.found_address);
-    }
-    else
-    {
-        print_next_letters(*result.next_chars_bool_map);
-    }
+    print_result(&result);
 
     return 0;
 }

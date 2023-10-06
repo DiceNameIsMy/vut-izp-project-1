@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 #include <limits.h>
@@ -53,22 +54,16 @@ character_bool_map new_character_bool_map()
 
 void allow_char(character_bool_map **idx, char c)
 {
-    // printf("Letter to allow: %c(%u)\n", c, (unsigned int)c);
-
     int array_idx = c / CHARACTER_BOOL_MAP_NODE_SIZE;
     int shift = c % CHARACTER_BOOL_MAP_NODE_SIZE;
 
     int pos = 1 << shift;
-
-    // printf("Idx: %i, Pos: %i\n", array_idx, pos);
 
     bool already_set = ((**idx).index[array_idx] & pos) == pos;
     if (!already_set)
     {
         (**idx).index[array_idx] |= pos;
         (**idx).amount_of_true++;
-
-        // printf("Alowed char: %c, Shift: %i, Idx value: %hi\n", c, shift, (**idx).index[array_idx]);
     }
 }
 
@@ -79,10 +74,8 @@ void print_next_letters(character_bool_map idx)
     printf("Enable: ");
     for (int i = 0; i < CHARACTER_BOOL_MAP_NODES; i++)
     {
-        // printf("Byte: %i, Value: %hi\n", i, idx.index[i]);
         for (int j = 0; j < CHARACTER_BOOL_MAP_NODE_SIZE; j++)
         {
-            // printf("Printed chars: %i, Amount of true: %i\n", printed_chars, idx.amount_of_true);
             if (printed_chars == idx.amount_of_true)
             {
                 printf("\n");
@@ -90,12 +83,9 @@ void print_next_letters(character_bool_map idx)
             }
             int n = 0b0000000000000001 << j;
             bool should_print = (idx.index[i] & n) == n;
-            // printf("Bit: %i\n", n);
 
             if (should_print)
             {
-                // printf("Printing bit: %u\n", n);
-                // printf("Char to print: %i\n", ((i * CHARACTER_INDEX_ITEM_BITS_AMOUNT) + j));
                 printf("%c", (char)((i * CHARACTER_BOOL_MAP_NODE_SIZE) + j));
                 printed_chars++;
             }
@@ -181,7 +171,6 @@ autocomplete_result autocomplete(character_bool_map **idx, char *key, int addres
         }
         else if (match_result == PartlyMatch)
         {
-            // printf("%c is a match\n", address[key_len]);
             char next_letter = address[key_len];
             allow_char(idx, to_uppercase(next_letter));
         }
@@ -201,7 +190,8 @@ autocomplete_result autocomplete(character_bool_map **idx, char *key, int addres
 
 bool logging_enabled()
 {
-    return true;
+    char *logging = getenv("KEYFILTER_LOG");
+    return logging != NULL && strcmp(logging, "1") == 0;
 }
 
 void log_parsed_input(char key[], char *addresses[], int addresses_amount)

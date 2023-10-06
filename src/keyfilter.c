@@ -1,79 +1,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <limits.h>
 
-typedef enum address_matches
-{
-    Yes,
-    No,
-    Partly
-} address_matches;
+// `#define` was used to set the array size at compile-time
+#define _CHARACTER_BOOL_MAP_NODES 32
+const int CHARACTER_BOOL_MAP_NODES = _CHARACTER_BOOL_MAP_NODES;
+const int CHARACTER_BOOL_MAP_NODE_SIZE = 8;
 
-typedef struct character_index
-{
-    int index[16];
-    int amount_of_true;
-} character_index;
-
-character_index new_character_index()
-{
-    character_index chars_idx;
-    chars_idx.amount_of_true = 0;
-
-    for (int i = 0; i < 16; i++)
-    {
-        chars_idx.index[i] = 0;
-    }
-
-    return chars_idx;
-}
-
-character_index allow_char(character_index idx, char c)
-{
-    int array_idx = c / 16;
-    int shift = c % 16;
-
-    int pos = 0b0000000000000001 << shift;
-
-    bool already_set = (idx.index[array_idx] & pos) == pos;
-    if (!already_set)
-    {
-        idx.index[array_idx] |= pos;
-        idx.amount_of_true++;
-    }
-
-    return idx;
-}
-
-void print_chars(character_index idx)
-{
-    int printed_chars = 0;
-
-    printf("ENABLE: ");
-    for (int i = 0; i < 16; i++)
-    {
-        // printf("Byte: %i\n", i);
-        for (int j = 0; j < 16; j++)
-        {
-            if (printed_chars == idx.amount_of_true)
-            {
-                printf("\n");
-                return;
-            }
-            int n = 0b0000000000000001 << j;
-            // printf("Bit: %i, Value: %i\n", n, idx.index[i]);
-            bool should_print = (idx.index[i] & n) == n;
-
-            if (should_print)
-            {
-                // printf("Char to print: %i\n", ((i * 16) + j));
-                printf("%c", (char)((i * 16) + j));
-                printed_chars++;
-            }
-        }
-    }
-    printf("\n");
-}
+// helper functions
 
 bool is_lowercase(char c)
 {
@@ -89,12 +24,94 @@ char to_uppercase(char c)
 {
     if (is_lowercase(c))
     {
-        return c & 223;
+        return c & 0b11011111;
     }
     return c;
 }
 
-bool is_address_matching(char *key, char *address)
+// Stores which characters can be unputted next.
+// Each bit in the array of integers represents a character
+// with values: 0 - can't, and 1 - can be included
+typedef struct character_bool_map
+{
+    char index[_CHARACTER_BOOL_MAP_NODES];
+    int amount_of_true;
+} character_bool_map;
+
+character_bool_map new_character_bool_map()
+{
+    character_bool_map chars_idx;
+    chars_idx.amount_of_true = 0;
+
+    for (int i = 0; i < CHARACTER_BOOL_MAP_NODES; i++)
+    {
+        chars_idx.index[i] = 0;
+    }
+
+    return chars_idx;
+}
+
+void allow_char(character_bool_map **idx, char c)
+{
+    // printf("Letter to allow: %c(%u)\n", c, (unsigned int)c);
+
+    int array_idx = c / CHARACTER_BOOL_MAP_NODE_SIZE;
+    int shift = c % CHARACTER_BOOL_MAP_NODE_SIZE;
+
+    int pos = 1 << shift;
+
+    // printf("Idx: %i, Pos: %i\n", array_idx, pos);
+
+    bool already_set = ((**idx).index[array_idx] & pos) == pos;
+    if (!already_set)
+    {
+        (**idx).index[array_idx] |= pos;
+        (**idx).amount_of_true++;
+
+        // printf("Alowed char: %c, Shift: %i, Idx value: %hi\n", c, shift, (**idx).index[array_idx]);
+    }
+}
+
+void print_next_letters(character_bool_map idx)
+{
+    int printed_chars = 0;
+
+    printf("Enable: ");
+    for (int i = 0; i < CHARACTER_BOOL_MAP_NODES; i++)
+    {
+        // printf("Byte: %i, Value: %hi\n", i, idx.index[i]);
+        for (int j = 0; j < CHARACTER_BOOL_MAP_NODE_SIZE; j++)
+        {
+            // printf("Printed chars: %i, Amount of true: %i\n", printed_chars, idx.amount_of_true);
+            if (printed_chars == idx.amount_of_true)
+            {
+                printf("\n");
+                return;
+            }
+            int n = 0b0000000000000001 << j;
+            bool should_print = (idx.index[i] & n) == n;
+            // printf("Bit: %i\n", n);
+
+            if (should_print)
+            {
+                // printf("Printing bit: %u\n", n);
+                // printf("Char to print: %i\n", ((i * CHARACTER_INDEX_ITEM_BITS_AMOUNT) + j));
+                printf("%c", (char)((i * CHARACTER_BOOL_MAP_NODE_SIZE) + j));
+                printed_chars++;
+            }
+        }
+    }
+    printf("\n");
+}
+
+typedef enum address_match_result
+{
+    FullMatch,
+    DoesNotMatch,
+    PartlyMatch
+} address_match_result;
+
+address_match_result check_address(char *key, char *address)
 {
     int key_len = strlen(key);
 
@@ -102,33 +119,92 @@ bool is_address_matching(char *key, char *address)
     {
         if (to_uppercase(key[i]) != to_uppercase(address[i]))
         {
-            return false;
+            return DoesNotMatch;
         }
     }
-    return true;
+
+    int address_len = strlen(address);
+    if (key_len == address_len)
+    {
+        return FullMatch;
+    }
+
+    return PartlyMatch;
 }
 
-character_index poppulate_next_chars(character_index idx, char *key, int addresses_amount, char *addresses[])
+typedef struct autocomplete_result
+{
+    bool no_results;
+    char *found_address;
+    character_bool_map *next_chars_bool_map;
+} autocomplete_result;
+
+autocomplete_result no_match_autocomplete_result(character_bool_map **idx)
+{
+    autocomplete_result result;
+    result.no_results = true;
+    result.found_address = NULL;
+    result.next_chars_bool_map = *idx;
+    return result;
+}
+
+autocomplete_result full_match_autocomplete_result(character_bool_map **idx, char *address)
+{
+    autocomplete_result result;
+    result.no_results = false;
+    result.found_address = address;
+    result.next_chars_bool_map = *idx;
+    return result;
+}
+
+autocomplete_result partial_match_autocomplete_result(character_bool_map **idx)
+{
+    autocomplete_result result;
+    result.no_results = false;
+    result.found_address = NULL;
+    result.next_chars_bool_map = *idx;
+    return result;
+}
+
+autocomplete_result autocomplete(character_bool_map **idx, char *key, int addresses_amount, char *addresses[])
 {
     int key_len = strlen(key);
 
     for (int i = 0; i < addresses_amount; i++)
     {
         char *address = addresses[i];
-        bool is_match = is_address_matching(key, address);
+        address_match_result match_result = check_address(key, address);
 
-        if (is_match)
+        if (match_result == DoesNotMatch)
+        {
+            continue;
+        }
+        else if (match_result == PartlyMatch)
         {
             // printf("%c is a match\n", address[key_len]);
-            char next_letter = to_uppercase(address[key_len]);
-
-            idx = allow_char(idx, next_letter);
+            char next_letter = address[key_len];
+            allow_char(idx, to_uppercase(next_letter));
+        }
+        else if (match_result == FullMatch)
+        {
+            return full_match_autocomplete_result(idx, address);
         }
     }
-    return idx;
+
+    if ((**idx).amount_of_true == 0)
+    {
+        return no_match_autocomplete_result(idx);
+    }
+
+    return partial_match_autocomplete_result(idx);
 }
 
-void print_parsed_input(char key[], char *addresses[], int addresses_amount)
+bool logging_enabled()
+{
+    return true;
+}
+
+void log_parsed_input(char key[], char *addresses[], int addresses_amount)
 {
     printf("Key: %s\n", key);
 
@@ -148,7 +224,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    character_index chars_index = new_character_index();
+    character_bool_map chars_index = new_character_bool_map();
+    character_bool_map *chars_index_ptr = &chars_index;
+    autocomplete_result result;
 
     char first_letter = argv[1][0];
 
@@ -163,10 +241,12 @@ int main(int argc, char *argv[])
         {
             addresses[i] = argv[i + 2];
         }
+        if (logging_enabled())
+        {
+            log_parsed_input(key, addresses, addresses_amount);
+        }
 
-        print_parsed_input(key, addresses, addresses_amount);
-
-        chars_index = poppulate_next_chars(chars_index, key, addresses_amount, addresses);
+        result = autocomplete(&chars_index_ptr, key, addresses_amount, addresses);
     }
     else
     {
@@ -179,13 +259,26 @@ int main(int argc, char *argv[])
         {
             addresses[i] = argv[i + 1];
         }
+        if (logging_enabled())
+        {
+            log_parsed_input(key, addresses, addresses_amount);
+        }
 
-        print_parsed_input(key, addresses, addresses_amount);
-
-        chars_index = poppulate_next_chars(chars_index, key, addresses_amount, addresses);
+        result = autocomplete(&chars_index_ptr, key, addresses_amount, addresses);
     }
 
-    print_chars(chars_index);
+    if (result.no_results)
+    {
+        printf("Not found\n");
+    }
+    else if (result.found_address != NULL)
+    {
+        printf("Found: %s\n", result.found_address);
+    }
+    else
+    {
+        print_next_letters(*result.next_chars_bool_map);
+    }
 
     return 0;
 }

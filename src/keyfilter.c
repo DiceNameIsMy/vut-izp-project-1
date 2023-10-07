@@ -124,7 +124,7 @@ compare_result compare_to_key(char *key, char *value)
 typedef struct keyfilter_result
 {
     bool no_results;
-    char *found_address;
+    char *found_item;
     char_bool_map *next_chars_bool_map;
 } keyfilter_result;
 
@@ -132,16 +132,16 @@ keyfilter_result no_match_keyfilter_result(char_bool_map **idx)
 {
     keyfilter_result result;
     result.no_results = true;
-    result.found_address = NULL;
+    result.found_item = NULL;
     result.next_chars_bool_map = *idx;
     return result;
 }
 
-keyfilter_result full_match_keyfilter_result(char_bool_map **idx, char *address)
+keyfilter_result full_match_keyfilter_result(char_bool_map **idx, char *item)
 {
     keyfilter_result result;
     result.no_results = false;
-    result.found_address = address;
+    result.found_item = item;
     result.next_chars_bool_map = *idx;
     return result;
 }
@@ -150,7 +150,7 @@ keyfilter_result partial_match_keyfilter_result(char_bool_map **idx)
 {
     keyfilter_result result;
     result.no_results = false;
-    result.found_address = NULL;
+    result.found_item = NULL;
     result.next_chars_bool_map = *idx;
     return result;
 }
@@ -211,15 +211,15 @@ void print_result(keyfilter_result *result)
     {
         printf("Not found\n");
     }
-    else if (result->found_address != NULL)
+    else if (result->found_item != NULL)
     {
-        char *address_ptr = result->found_address;
-        while (*address_ptr)
+        char *item_ptr = result->found_item;
+        while (*item_ptr)
         {
-            *address_ptr = toupper(*address_ptr);
-            address_ptr++;
+            *item_ptr = toupper(*item_ptr);
+            item_ptr++;
         }
-        printf("Found: %s\n", result->found_address);
+        printf("Found: %s\n", result->found_item);
     }
     else
     {

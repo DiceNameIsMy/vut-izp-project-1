@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,15 +19,6 @@ bool is_lowercase(char c)
 bool is_uppercase(char c)
 {
     return (c > 64 && c < 91);
-}
-
-char to_uppercase(char c)
-{
-    if (is_lowercase(c))
-    {
-        return c & 0b11011111;
-    }
-    return c;
 }
 
 // Stores which characters can be unputted next.
@@ -114,7 +106,7 @@ compare_result compare_to_key(char *key, char *value)
 
     for (int char_idx = 0; char_idx < key_len; char_idx++)
     {
-        if (to_uppercase(key[char_idx]) != to_uppercase(value[char_idx]))
+        if (toupper(key[char_idx]) != toupper(value[char_idx]))
         {
             return NoMatch;
         }
@@ -179,7 +171,7 @@ keyfilter_result keyfilter(char_bool_map **idx, char *key, int items_amount, cha
         else if (match_result == PartialMatch)
         {
             char next_letter = item[key_len];
-            allow_char(idx, to_uppercase(next_letter));
+            allow_char(idx, toupper(next_letter));
         }
         else if (match_result == FullMatch)
         {

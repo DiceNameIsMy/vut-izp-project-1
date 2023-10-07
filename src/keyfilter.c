@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include <limits.h>
 
 // `#define` was used to set the array size at compile-time
 #define _CHARACTER_BOOL_MAP_NODES 32
@@ -33,15 +32,15 @@ char to_uppercase(char c)
 // Stores which characters can be unputted next.
 // Each bit in the array of nodes represents a character
 // with values: 0 - can't, and 1 - can be included
-typedef struct character_bool_map
+typedef struct char_bool_map
 {
     char index[_CHARACTER_BOOL_MAP_NODES];
     int amount_of_true;
-} character_bool_map;
+} char_bool_map;
 
-character_bool_map new_character_bool_map()
+char_bool_map new_char_bool_map()
 {
-    character_bool_map chars_idx;
+    char_bool_map chars_idx;
     chars_idx.amount_of_true = 0;
 
     for (int i = 0; i < CHARACTER_BOOL_MAP_NODES; i++)
@@ -52,7 +51,7 @@ character_bool_map new_character_bool_map()
     return chars_idx;
 }
 
-void allow_char(character_bool_map **idx, char c)
+void allow_char(char_bool_map **idx, char c)
 {
     int array_idx = c / CHARACTER_BOOL_MAP_NODE_SIZE;
     int shift = c % CHARACTER_BOOL_MAP_NODE_SIZE;
@@ -67,7 +66,7 @@ void allow_char(character_bool_map **idx, char c)
     }
 }
 
-void print_next_letters(character_bool_map idx)
+void print_next_chars(char_bool_map idx)
 {
     int printed_chars = 0;
 
@@ -94,98 +93,98 @@ void print_next_letters(character_bool_map idx)
     printf("\n");
 }
 
-typedef enum address_match_result
+typedef enum compare_result
 {
     FullMatch,
-    DoesNotMatch,
-    PartlyMatch
-} address_match_result;
+    NoMatch,
+    PartialMatch
+} compare_result;
 
-address_match_result check_address(char *key, char *address)
+compare_result compare_to_key(char *key, char *value)
 {
     int key_len = strlen(key);
 
     for (int i = 0; i < key_len; i++)
     {
-        if (to_uppercase(key[i]) != to_uppercase(address[i]))
+        if (to_uppercase(key[i]) != to_uppercase(value[i]))
         {
-            return DoesNotMatch;
+            return NoMatch;
         }
     }
 
-    int address_len = strlen(address);
-    if (key_len == address_len)
+    int value_len = strlen(value);
+    if (key_len == value_len)
     {
         return FullMatch;
     }
 
-    return PartlyMatch;
+    return PartialMatch;
 }
 
-typedef struct autocomplete_result
+typedef struct keyfilter_result
 {
     bool no_results;
     char *found_address;
-    character_bool_map *next_chars_bool_map;
-} autocomplete_result;
+    char_bool_map *next_chars_bool_map;
+} keyfilter_result;
 
-autocomplete_result no_match_autocomplete_result(character_bool_map **idx)
+keyfilter_result no_match_keyfilter_result(char_bool_map **idx)
 {
-    autocomplete_result result;
+    keyfilter_result result;
     result.no_results = true;
     result.found_address = NULL;
     result.next_chars_bool_map = *idx;
     return result;
 }
 
-autocomplete_result full_match_autocomplete_result(character_bool_map **idx, char *address)
+keyfilter_result full_match_keyfilter_result(char_bool_map **idx, char *address)
 {
-    autocomplete_result result;
+    keyfilter_result result;
     result.no_results = false;
     result.found_address = address;
     result.next_chars_bool_map = *idx;
     return result;
 }
 
-autocomplete_result partial_match_autocomplete_result(character_bool_map **idx)
+keyfilter_result partial_match_keyfilter_result(char_bool_map **idx)
 {
-    autocomplete_result result;
+    keyfilter_result result;
     result.no_results = false;
     result.found_address = NULL;
     result.next_chars_bool_map = *idx;
     return result;
 }
 
-autocomplete_result autocomplete(character_bool_map **idx, char *key, int addresses_amount, char *addresses[])
+keyfilter_result keyfilter(char_bool_map **idx, char *key, int items_amount, char *items[])
 {
     int key_len = strlen(key);
 
-    for (int i = 0; i < addresses_amount; i++)
+    for (int i = 0; i < items_amount; i++)
     {
-        char *address = addresses[i];
-        address_match_result match_result = check_address(key, address);
+        char *item = items[i];
+        compare_result match_result = compare_to_key(key, item);
 
-        if (match_result == DoesNotMatch)
+        if (match_result == NoMatch)
         {
             continue;
         }
-        else if (match_result == PartlyMatch)
+        else if (match_result == PartialMatch)
         {
-            char next_letter = address[key_len];
+            char next_letter = item[key_len];
             allow_char(idx, to_uppercase(next_letter));
         }
         else if (match_result == FullMatch)
         {
-            return full_match_autocomplete_result(idx, address);
+            return full_match_keyfilter_result(idx, item);
         }
     }
 
     if ((**idx).amount_of_true == 0)
     {
-        return no_match_autocomplete_result(idx);
+        return no_match_keyfilter_result(idx);
     }
 
-    return partial_match_autocomplete_result(idx);
+    return partial_match_keyfilter_result(idx);
 }
 
 bool logging_enabled()
@@ -206,7 +205,7 @@ void log_parsed_input(char key[], char *addresses[], int addresses_amount)
     printf("\n");
 }
 
-void print_result(autocomplete_result *result)
+void print_result(keyfilter_result *result)
 {
     if (result->no_results)
     {
@@ -218,7 +217,7 @@ void print_result(autocomplete_result *result)
     }
     else
     {
-        print_next_letters(*result->next_chars_bool_map);
+        print_next_chars(*result->next_chars_bool_map);
     }
 }
 
@@ -230,9 +229,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    character_bool_map chars_map = new_character_bool_map();
-    character_bool_map *chars_map_ptr = &chars_map;
-    autocomplete_result result;
+    char_bool_map chars_map = new_char_bool_map();
+    char_bool_map *chars_map_ptr = &chars_map;
+    keyfilter_result result;
 
     char first_letter = argv[1][0];
 
@@ -252,7 +251,7 @@ int main(int argc, char *argv[])
             log_parsed_input(key, addresses, addresses_amount);
         }
 
-        result = autocomplete(&chars_map_ptr, key, addresses_amount, addresses);
+        result = keyfilter(&chars_map_ptr, key, addresses_amount, addresses);
     }
     else
     {
@@ -270,7 +269,7 @@ int main(int argc, char *argv[])
             log_parsed_input(key, addresses, addresses_amount);
         }
 
-        result = autocomplete(&chars_map_ptr, key, addresses_amount, addresses);
+        result = keyfilter(&chars_map_ptr, key, addresses_amount, addresses);
     }
 
     print_result(&result);

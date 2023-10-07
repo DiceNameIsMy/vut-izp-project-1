@@ -112,9 +112,9 @@ compare_result compare_to_key(char *key, char *value)
 {
     int key_len = strlen(key);
 
-    for (int i = 0; i < key_len; i++)
+    for (int char_idx = 0; char_idx < key_len; char_idx++)
     {
-        if (to_uppercase(key[i]) != to_uppercase(value[i]))
+        if (to_uppercase(key[char_idx]) != to_uppercase(value[char_idx]))
         {
             return NoMatch;
         }
@@ -167,9 +167,9 @@ keyfilter_result keyfilter(char_bool_map **idx, char *key, int items_amount, cha
 {
     int key_len = strlen(key);
 
-    for (int i = 0; i < items_amount; i++)
+    for (int item_idx = 0; item_idx < items_amount; item_idx++)
     {
-        char *item = items[i];
+        char *item = items[item_idx];
         compare_result match_result = compare_to_key(key, item);
 
         if (match_result == NoMatch)
@@ -206,9 +206,9 @@ void log_parsed_input(char key[], char *addresses[], int addresses_amount)
     printf("Key: %s\n", key);
 
     printf("Addresses: ");
-    for (int i = 0; i < addresses_amount; i++)
+    for (int address_idx = 0; address_idx < addresses_amount; address_idx++)
     {
-        printf("%s, ", addresses[i]);
+        printf("%s, ", addresses[address_idx]);
     }
     printf("\n");
 }
@@ -250,9 +250,9 @@ int main(int argc, char *argv[])
         int addresses_amount = argc - 2;
         char *addresses[addresses_amount];
 
-        for (int i = 0; i < addresses_amount; i++)
+        for (int address_idx = 0; address_idx < addresses_amount; address_idx++)
         {
-            addresses[i] = argv[i + 2];
+            addresses[address_idx] = argv[address_idx + 2];
         }
         if (logging_enabled())
         {
@@ -268,9 +268,9 @@ int main(int argc, char *argv[])
         int addresses_amount = argc - 1;
         char *addresses[addresses_amount];
 
-        for (int i = 0; i < addresses_amount; i++)
+        for (int address_idx = 0; address_idx < addresses_amount; address_idx++)
         {
-            addresses[i] = argv[i + 1];
+            addresses[address_idx] = argv[address_idx + 1];
         }
         if (logging_enabled())
         {

@@ -213,6 +213,12 @@ void print_result(keyfilter_result *result)
     }
     else if (result->found_address != NULL)
     {
+        char *address_ptr = result->found_address;
+        while (*address_ptr)
+        {
+            *address_ptr = toupper(*address_ptr);
+            address_ptr++;
+        }
         printf("Found: %s\n", result->found_address);
     }
     else

@@ -66,26 +66,34 @@ void allow_char(char_bool_map **idx, char c)
     }
 }
 
+char get_node_char(int node_idx, int item_idx)
+{
+    return (node_idx * CHARACTER_BOOL_MAP_NODE_SIZE) + item_idx;
+}
+
 void print_next_chars(char_bool_map idx)
 {
     int printed_chars = 0;
 
     printf("Enable: ");
-    for (int i = 0; i < CHARACTER_BOOL_MAP_NODES; i++)
+    for (int node_idx = 0; node_idx < CHARACTER_BOOL_MAP_NODES; node_idx++)
     {
-        for (int j = 0; j < CHARACTER_BOOL_MAP_NODE_SIZE; j++)
+        for (int item_idx = 0; item_idx < CHARACTER_BOOL_MAP_NODE_SIZE; item_idx++)
         {
+            // optimization: Do not traverse further if there is
+            // definetly no chars left to print.
             if (printed_chars == idx.amount_of_true)
             {
                 printf("\n");
                 return;
             }
-            int n = 0b0000000000000001 << j;
-            bool should_print = (idx.index[i] & n) == n;
+
+            int n = 0b0000000000000001 << item_idx;
+            bool should_print = (idx.index[node_idx] & n) == n;
 
             if (should_print)
             {
-                printf("%c", (char)((i * CHARACTER_BOOL_MAP_NODE_SIZE) + j));
+                printf("%c", get_node_char(node_idx, item_idx));
                 printed_chars++;
             }
         }

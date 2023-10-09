@@ -4,22 +4,12 @@
 #include <string.h>
 #include <stdbool.h>
 
+#define IsLowercase(c) (c > 96 && c < 123)
+
 // `#define` was used to set the array size at compile-time
 #define _CHARACTER_BOOL_MAP_NODES 32
 const int CHARACTER_BOOL_MAP_NODES = _CHARACTER_BOOL_MAP_NODES;
 const int CHARACTER_BOOL_MAP_NODE_SIZE = 8;
-
-// helper functions
-
-bool is_lowercase(char c)
-{
-    return (c > 96 && c < 123);
-}
-
-bool is_uppercase(char c)
-{
-    return (c > 64 && c < 91);
-}
 
 // Stores which characters can be unputted next.
 // Each bit in the array of nodes represents a character
@@ -241,7 +231,7 @@ int main(int argc, char *argv[])
 
     char first_letter = argv[1][0];
 
-    if (is_lowercase(first_letter))
+    if (IsLowercase(first_letter))
     {
         char *key = argv[1];
 

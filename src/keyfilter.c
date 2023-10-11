@@ -11,6 +11,12 @@
 
 #define IsLowercase(c) (c > 96 && c < 123)
 
+bool logging_enabled()
+{
+    char *logging = getenv("KEYFILTER_LOGGING");
+    return logging != NULL && strcmp(logging, "1") == 0;
+}
+
 // Stores which characters can be unputted next.
 // Each bit in the array of nodes represents a character
 // with values: 0 - can't, and 1 - can be included
@@ -33,8 +39,13 @@ char_bool_map new_char_bool_map()
     return chars_idx;
 }
 
-void allow_char(char_bool_map **idx, char c)
+bool allow_char(char_bool_map **idx, char c)
 {
+    if ((int)c < 33 || (int)c > 126)
+    {
+        return false;
+    }
+
     int array_idx = c / BOOL_MAP_NODE_SIZE;
     int shift = c % BOOL_MAP_NODE_SIZE;
 
@@ -46,6 +57,8 @@ void allow_char(char_bool_map **idx, char c)
         (**idx).index[array_idx] |= pos;
         (**idx).amount_of_true++;
     }
+
+    return true;
 }
 
 char get_node_char(int node_idx, int item_idx)
@@ -89,6 +102,11 @@ typedef enum compare_result
 
 compare_result compare_to_key(char *key, char *value)
 {
+    if (logging_enabled())
+    {
+        printf("DEBUG: Comparing key `%s` to item `%s` with first letter `%i`\n", key, value, value[0]);
+    }
+
     int key_len = strlen(key);
 
     for (int char_idx = 0; char_idx < key_len; char_idx++)
@@ -178,10 +196,9 @@ keyfilter_result partial_match_keyfilter_result(char_bool_map **idx)
 
 keyfilter_result keyfilter(char_bool_map **idx, char *key, FILE *stream)
 {
-    bool all_items_read = false;
-    while (!all_items_read)
+    while (true)
     {
-        char item[MAX_ITEM_SIZE];
+        char item[MAX_ITEM_SIZE] = "";
         read_item_result item_result = read_item(&item[0], stream);
 
         if (item_result.item_too_long)
@@ -190,7 +207,7 @@ keyfilter_result keyfilter(char_bool_map **idx, char *key, FILE *stream)
         }
         if (item_result.read_last_item)
         {
-            all_items_read = true;
+            break;
         }
 
         compare_result match_result = compare_to_key(key, item);
@@ -202,7 +219,11 @@ keyfilter_result keyfilter(char_bool_map **idx, char *key, FILE *stream)
         else if (match_result == PartialMatch)
         {
             char next_letter = item[strlen(key)];
-            allow_char(idx, toupper(next_letter));
+            bool valid_char = allow_char(idx, toupper(next_letter));
+            if (!valid_char)
+            {
+                return invalid_item_keyfilter_result(idx);
+            }
         }
         else if (match_result == FullMatch)
         {

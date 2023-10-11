@@ -4,19 +4,19 @@
 #include <string.h>
 #include <stdbool.h>
 
-#define IsLowercase(c) (c > 96 && c < 123)
+#define MAX_ITEM_SIZE 100
+#define ITEM_SEPARATOR '\n'
+#define BOOL_MAP_NODES 32
+#define BOOL_MAP_NODE_SIZE (int)(8 * sizeof(char))
 
-// `#define` was used to set the array size at compile-time
-#define _CHARACTER_BOOL_MAP_NODES 32
-const int CHARACTER_BOOL_MAP_NODES = _CHARACTER_BOOL_MAP_NODES;
-const int CHARACTER_BOOL_MAP_NODE_SIZE = 8;
+#define IsLowercase(c) (c > 96 && c < 123)
 
 // Stores which characters can be unputted next.
 // Each bit in the array of nodes represents a character
 // with values: 0 - can't, and 1 - can be included
 typedef struct char_bool_map
 {
-    char index[_CHARACTER_BOOL_MAP_NODES];
+    char index[BOOL_MAP_NODES];
     int amount_of_true;
 } char_bool_map;
 
@@ -25,7 +25,7 @@ char_bool_map new_char_bool_map()
     char_bool_map chars_idx;
     chars_idx.amount_of_true = 0;
 
-    for (int i = 0; i < CHARACTER_BOOL_MAP_NODES; i++)
+    for (int i = 0; i < BOOL_MAP_NODES; i++)
     {
         chars_idx.index[i] = 0;
     }
@@ -35,13 +35,13 @@ char_bool_map new_char_bool_map()
 
 void allow_char(char_bool_map **idx, char c)
 {
-    int array_idx = c / CHARACTER_BOOL_MAP_NODE_SIZE;
-    int shift = c % CHARACTER_BOOL_MAP_NODE_SIZE;
+    int array_idx = c / BOOL_MAP_NODE_SIZE;
+    int shift = c % BOOL_MAP_NODE_SIZE;
 
     int pos = 1 << shift;
 
-    bool already_set = ((**idx).index[array_idx] & pos) == pos;
-    if (!already_set)
+    bool already_allowed = ((**idx).index[array_idx] & pos) == pos;
+    if (!already_allowed)
     {
         (**idx).index[array_idx] |= pos;
         (**idx).amount_of_true++;
@@ -50,7 +50,7 @@ void allow_char(char_bool_map **idx, char c)
 
 char get_node_char(int node_idx, int item_idx)
 {
-    return (node_idx * CHARACTER_BOOL_MAP_NODE_SIZE) + item_idx;
+    return (node_idx * BOOL_MAP_NODE_SIZE) + item_idx;
 }
 
 void print_next_chars(char_bool_map idx)
@@ -58,12 +58,10 @@ void print_next_chars(char_bool_map idx)
     int printed_chars = 0;
 
     printf("Enable: ");
-    for (int node_idx = 0; node_idx < CHARACTER_BOOL_MAP_NODES; node_idx++)
+    for (int node_idx = 0; node_idx < BOOL_MAP_NODES; node_idx++)
     {
-        for (int item_idx = 0; item_idx < CHARACTER_BOOL_MAP_NODE_SIZE; item_idx++)
+        for (int item_idx = 0; item_idx < BOOL_MAP_NODE_SIZE; item_idx++)
         {
-            // optimization: Do not traverse further if there is
-            // definetly no chars left to print.
             if (printed_chars == idx.amount_of_true)
             {
                 printf("\n");
@@ -80,7 +78,6 @@ void print_next_chars(char_bool_map idx)
             }
         }
     }
-    printf("\n");
 }
 
 typedef enum compare_result
@@ -111,47 +108,91 @@ compare_result compare_to_key(char *key, char *value)
     return PartialMatch;
 }
 
-typedef struct keyfilter_result
+typedef struct read_item_result
 {
-    bool no_results;
-    char *found_item;
-    char_bool_map *next_chars_bool_map;
-} keyfilter_result;
+    bool read_last_item;
+    bool item_too_long;
+} read_item_result;
 
-keyfilter_result no_match_keyfilter_result(char_bool_map **idx)
+read_item_result read_item(char *item, FILE *stream)
 {
-    keyfilter_result result;
-    result.no_results = true;
-    result.found_item = NULL;
-    result.next_chars_bool_map = *idx;
+    int i = -1;
+
+    char c;
+    read_item_result result;
+    while (true)
+    {
+        c = fgetc(stream);
+        i++;
+
+        if (c == ITEM_SEPARATOR)
+        {
+            break;
+        }
+
+        item[i] = c;
+
+        result.read_last_item = (c == EOF);
+        result.item_too_long = (i == MAX_ITEM_SIZE);
+
+        if (result.item_too_long || result.read_last_item)
+        {
+            break;
+        }
+    }
     return result;
 }
 
-keyfilter_result full_match_keyfilter_result(char_bool_map **idx, char *item)
+typedef struct keyfilter_result
 {
-    keyfilter_result result;
-    result.no_results = false;
-    result.found_item = item;
-    result.next_chars_bool_map = *idx;
+    bool has_invalid_item;
+    bool no_results;
+    char found_item[MAX_ITEM_SIZE];
+    char_bool_map *next_chars_bool_map;
+} keyfilter_result;
+
+keyfilter_result invalid_item_keyfilter_result(char_bool_map **idx)
+{
+    keyfilter_result result = {true, true, "", *idx};
+    return result;
+}
+
+keyfilter_result no_match_keyfilter_result(char_bool_map **idx)
+{
+    keyfilter_result result = {false, true, "", *idx};
+    return result;
+}
+
+keyfilter_result full_match_keyfilter_result(char_bool_map **idx, char item[MAX_ITEM_SIZE])
+{
+    keyfilter_result result = {false, false, "", *idx};
+    strcpy(result.found_item, item);
     return result;
 }
 
 keyfilter_result partial_match_keyfilter_result(char_bool_map **idx)
 {
-    keyfilter_result result;
-    result.no_results = false;
-    result.found_item = NULL;
-    result.next_chars_bool_map = *idx;
+    keyfilter_result result = {false, false, "", *idx};
     return result;
 }
 
-keyfilter_result keyfilter(char_bool_map **idx, char *key, int items_amount, char *items[])
+keyfilter_result keyfilter(char_bool_map **idx, char *key, FILE *stream)
 {
-    int key_len = strlen(key);
-
-    for (int item_idx = 0; item_idx < items_amount; item_idx++)
+    bool all_items_read = false;
+    while (!all_items_read)
     {
-        char *item = items[item_idx];
+        char item[MAX_ITEM_SIZE];
+        read_item_result item_result = read_item(&item[0], stream);
+
+        if (item_result.item_too_long)
+        {
+            return invalid_item_keyfilter_result(idx);
+        }
+        if (item_result.read_last_item)
+        {
+            all_items_read = true;
+        }
+
         compare_result match_result = compare_to_key(key, item);
 
         if (match_result == NoMatch)
@@ -160,7 +201,7 @@ keyfilter_result keyfilter(char_bool_map **idx, char *key, int items_amount, cha
         }
         else if (match_result == PartialMatch)
         {
-            char next_letter = item[key_len];
+            char next_letter = item[strlen(key)];
             allow_char(idx, toupper(next_letter));
         }
         else if (match_result == FullMatch)
@@ -177,98 +218,40 @@ keyfilter_result keyfilter(char_bool_map **idx, char *key, int items_amount, cha
     return partial_match_keyfilter_result(idx);
 }
 
-bool logging_enabled()
-{
-    char *logging = getenv("KEYFILTER_LOG");
-    return logging != NULL && strcmp(logging, "1") == 0;
-}
-
-void log_parsed_input(char key[], char *addresses[], int addresses_amount)
-{
-    printf("Key: %s\n", key);
-
-    printf("Addresses: ");
-    for (int address_idx = 0; address_idx < addresses_amount; address_idx++)
-    {
-        printf("%s, ", addresses[address_idx]);
-    }
-    printf("\n");
-}
-
-void print_result(keyfilter_result *result)
-{
-    if (result->no_results)
-    {
-        printf("Not found\n");
-    }
-    else if (result->found_item != NULL)
-    {
-        char *item_ptr = result->found_item;
-        while (*item_ptr)
-        {
-            *item_ptr = toupper(*item_ptr);
-            item_ptr++;
-        }
-        printf("Found: %s\n", result->found_item);
-    }
-    else
-    {
-        print_next_chars(*result->next_chars_bool_map);
-    }
-}
-
 int main(int argc, char *argv[])
 {
-    if (argc == 1)
+    if (argc > 2)
     {
-        printf("At least one argument must be provided.\n");
+        printf("No more than 1 argument must be provided. It must be a key to make a search for.\n");
         return 1;
+    }
+
+    char key[MAX_ITEM_SIZE] = "";
+    if (argc == 2)
+    {
+        strcpy(key, argv[1]);
     }
 
     char_bool_map chars_map = new_char_bool_map();
     char_bool_map *chars_map_ptr = &chars_map;
-    keyfilter_result result;
+    keyfilter_result result = keyfilter(&chars_map_ptr, key, stdin);
 
-    char first_letter = argv[1][0];
-
-    if (IsLowercase(first_letter))
+    if (result.has_invalid_item)
     {
-        char *key = argv[1];
-
-        int addresses_amount = argc - 2;
-        char *addresses[addresses_amount];
-
-        for (int address_idx = 0; address_idx < addresses_amount; address_idx++)
-        {
-            addresses[address_idx] = argv[address_idx + 2];
-        }
-        if (logging_enabled())
-        {
-            log_parsed_input(key, addresses, addresses_amount);
-        }
-
-        result = keyfilter(&chars_map_ptr, key, addresses_amount, addresses);
+        printf("Some of the items is invalid.\n");
+    }
+    else if (result.no_results)
+    {
+        printf("Not found\n");
+    }
+    else if (strlen(result.found_item) != 0)
+    {
+        printf("Found: %s\n", result.found_item);
     }
     else
     {
-        char *key = "";
-
-        int addresses_amount = argc - 1;
-        char *addresses[addresses_amount];
-
-        for (int address_idx = 0; address_idx < addresses_amount; address_idx++)
-        {
-            addresses[address_idx] = argv[address_idx + 1];
-        }
-        if (logging_enabled())
-        {
-            log_parsed_input(key, addresses, addresses_amount);
-        }
-
-        result = keyfilter(&chars_map_ptr, key, addresses_amount, addresses);
+        print_next_chars(chars_map);
     }
-
-    print_result(&result);
 
     return 0;
 }

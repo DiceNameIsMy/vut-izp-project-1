@@ -128,35 +128,29 @@ compare_result compare_to_key(char *key, char *value)
 
 typedef struct read_item_result
 {
-    bool read_last_item;
+    bool read_all_items;
     bool item_too_long;
 } read_item_result;
 
 read_item_result read_item(char *item, FILE *stream)
 {
-    int i = -1;
+    int next_char_idx = 0;
 
     char c;
     read_item_result result;
-    while (true)
+
+    while ((c = fgetc(stream)) != ITEM_SEPARATOR)
     {
-        c = fgetc(stream);
-        i++;
+        item[next_char_idx] = c;
 
-        if (c == ITEM_SEPARATOR)
+        result.read_all_items = (c == EOF);
+        result.item_too_long = (next_char_idx == MAX_ITEM_SIZE);
+        if (result.read_all_items || result.item_too_long)
         {
-            break;
+            return result;
         }
 
-        item[i] = c;
-
-        result.read_last_item = (c == EOF);
-        result.item_too_long = (i == MAX_ITEM_SIZE);
-
-        if (result.item_too_long || result.read_last_item)
-        {
-            break;
-        }
+        next_char_idx++;
     }
     return result;
 }
@@ -205,7 +199,7 @@ keyfilter_result keyfilter(char_bool_map **idx, char *key, FILE *stream)
         {
             return invalid_item_keyfilter_result(idx);
         }
-        if (item_result.read_last_item)
+        if (item_result.read_all_items)
         {
             break;
         }

@@ -46,10 +46,19 @@ char_bool_map new_char_bool_map()
     return chars_idx;
 }
 
+bool is_printable(char c)
+{
+    return (int)c > 32 || (int)c < 127;
+}
+
 bool allow_char(char_bool_map *idx, char c)
 {
-    if ((int)c < 33 || (int)c > 126)
+    if (!is_printable(c))
     {
+        if (logging_enabled())
+        {
+            printf("LOG: Received an invalid char `%c(%i)`\n", c, c);
+        }
         return false;
     }
 
@@ -84,34 +93,39 @@ bool allow_char(char_bool_map *idx, char c)
     return true;
 }
 
-char get_node_char(int node_idx, int item_idx)
+char get_char_from_bool_map(int node_idx, int item_idx)
 {
     return (node_idx * BOOL_MAP_NODE_SIZE) + item_idx;
 }
 
+void print_node_chars(char_bool_map *idx, int node_idx, int *print_counter)
+{
+    for (int item_idx = 0; item_idx < BOOL_MAP_NODE_SIZE; item_idx++)
+    {
+        int n = 0b0000000000000001 << item_idx;
+        bool should_print = (idx->index[node_idx] & n) == n;
+
+        if (should_print)
+        {
+            printf("%c", get_char_from_bool_map(node_idx, item_idx));
+            (*print_counter)++;
+        }
+    }
+}
+
 void print_next_chars(char_bool_map *idx)
 {
-    int printed_chars = 0;
+    int printed_chars_counter = 0;
 
     printf("Enable: ");
     for (int node_idx = 0; node_idx < BOOL_MAP_NODES; node_idx++)
     {
-        for (int item_idx = 0; item_idx < BOOL_MAP_NODE_SIZE; item_idx++)
+        print_node_chars(idx, node_idx, &printed_chars_counter);
+
+        if (printed_chars_counter == idx->chars_counter)
         {
-            if (printed_chars == idx->chars_counter)
-            {
-                printf("\n");
-                return;
-            }
-
-            int n = 0b0000000000000001 << item_idx;
-            bool should_print = (idx->index[node_idx] & n) == n;
-
-            if (should_print)
-            {
-                printf("%c", get_node_char(node_idx, item_idx));
-                printed_chars++;
-            }
+            printf("\n");
+            return;
         }
     }
 }
@@ -299,7 +313,7 @@ int main(int argc, char *argv[])
 
     if (!is_empty(result.invalid_item))
     {
-        printf("Some of the items is invalid.\n");
+        printf("Received an invalid item `%s`.\n", result.invalid_item);
     }
     else if (result.no_results)
     {
@@ -309,7 +323,7 @@ int main(int argc, char *argv[])
     {
         printf("Found: %s\n", result.found_item);
 
-        if (chars_map.chars_counter != 0)
+        if (chars_map.chars_counter > 1)
         {
             print_next_chars(&chars_map);
         }

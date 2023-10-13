@@ -39,23 +39,21 @@ char_bool_map new_char_bool_map()
     return chars_idx;
 }
 
-bool allow_char(char_bool_map **idx, char c)
+bool allow_char(char_bool_map *idx, char c)
 {
     if ((int)c < 33 || (int)c > 126)
     {
         return false;
     }
 
-    int array_idx = c / BOOL_MAP_NODE_SIZE;
-    int shift = c % BOOL_MAP_NODE_SIZE;
+    int node_idx = c / BOOL_MAP_NODE_SIZE;
+    int char_pos = 1 << (c % BOOL_MAP_NODE_SIZE);
 
-    int pos = 1 << shift;
-
-    bool already_allowed = ((**idx).index[array_idx] & pos) == pos;
-    if (!already_allowed)
+    bool is_char_allowed = (idx->index[char_pos] & node_idx) == node_idx;
+    if (!is_char_allowed)
     {
-        (**idx).index[array_idx] |= pos;
-        (**idx).amount_of_true++;
+        idx->index[node_idx] |= char_pos;
+        idx->amount_of_true++;
     }
 
     return true;
@@ -163,32 +161,32 @@ typedef struct keyfilter_result
     char_bool_map *next_chars_bool_map;
 } keyfilter_result;
 
-keyfilter_result invalid_item_keyfilter_result(char_bool_map **idx)
+keyfilter_result invalid_item_keyfilter_result(char_bool_map *idx)
 {
-    keyfilter_result result = {true, true, "", *idx};
+    keyfilter_result result = {true, true, "", idx};
     return result;
 }
 
-keyfilter_result no_match_keyfilter_result(char_bool_map **idx)
+keyfilter_result no_match_keyfilter_result(char_bool_map *idx)
 {
-    keyfilter_result result = {false, true, "", *idx};
+    keyfilter_result result = {false, true, "", idx};
     return result;
 }
 
-keyfilter_result full_match_keyfilter_result(char_bool_map **idx, char item[MAX_ITEM_SIZE])
+keyfilter_result full_match_keyfilter_result(char_bool_map *idx, char item[MAX_ITEM_SIZE])
 {
-    keyfilter_result result = {false, false, "", *idx};
+    keyfilter_result result = {false, false, "", idx};
     strcpy(result.found_item, item);
     return result;
 }
 
-keyfilter_result partial_match_keyfilter_result(char_bool_map **idx)
+keyfilter_result partial_match_keyfilter_result(char_bool_map *idx)
 {
-    keyfilter_result result = {false, false, "", *idx};
+    keyfilter_result result = {false, false, "", idx};
     return result;
 }
 
-keyfilter_result keyfilter(char_bool_map **idx, char *key, FILE *stream)
+keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
 {
     while (true)
     {
@@ -225,7 +223,7 @@ keyfilter_result keyfilter(char_bool_map **idx, char *key, FILE *stream)
         }
     }
 
-    if ((**idx).amount_of_true == 0)
+    if (idx->amount_of_true == 0)
     {
         return no_match_keyfilter_result(idx);
     }
@@ -248,8 +246,7 @@ int main(int argc, char *argv[])
     }
 
     char_bool_map chars_map = new_char_bool_map();
-    char_bool_map *chars_map_ptr = &chars_map;
-    keyfilter_result result = keyfilter(&chars_map_ptr, key, stdin);
+    keyfilter_result result = keyfilter(&chars_map, key, stdin);
 
     if (result.has_invalid_item)
     {

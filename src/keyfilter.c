@@ -55,7 +55,7 @@ bool allow_char(char_bool_map *idx, char c)
 
     if (logging_enabled())
     {
-        printf("DEBUG: Attemting to allow char %c(%i).\n", c, c);
+        printf("LOG: Attemting to allow char %c(%i).\n", c, c);
     }
 
     int node_idx = c / BOOL_MAP_NODE_SIZE;
@@ -66,7 +66,7 @@ bool allow_char(char_bool_map *idx, char c)
     {
         if (logging_enabled())
         {
-            printf("DEBUG: Setting char %c(%i) as allowed.\n", c, c);
+            printf("LOG: Setting char %c(%i) as allowed.\n", c, c);
         }
         idx->index[node_idx] |= char_pos;
         idx->chars_counter++;
@@ -75,7 +75,7 @@ bool allow_char(char_bool_map *idx, char c)
     {
         if (logging_enabled())
         {
-            printf("DEBUG: Char `%c` is already allowed.\n", c);
+            printf("LOG: Char `%c` is already allowed.\n", c);
         }
     }
 
@@ -127,7 +127,7 @@ compare_result compare_to_key(char *key, char *value)
 {
     if (logging_enabled())
     {
-        printf("DEBUG: Comparing key `%s` to item `%s` with first letter `%i`\n", key, value, value[0]);
+        printf("LOG: Comparing key `%s` to item `%s` with first letter `%i`\n", key, value, value[0]);
     }
 
     int key_len = strlen(key);
@@ -256,12 +256,12 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
 
     if (logging_enabled())
     {
-        printf("DEBUG: Finished filtering\n");
-        printf("DEBUG: Returning results with following data:\n");
-        printf("DEBUG: latest_item: `%s`\n", latest_item);
-        printf("DEBUG: found_item: `%s`\n", found_item);
-        printf("DEBUG: amount_of_chars_allowed: `%i`\n", idx->chars_counter);
-        printf("DEBUG: amount_of_items_matched: `%i`\n", idx->allowed_chars_counter);
+        printf("LOG: Finished filtering\n");
+        printf("LOG: Returning results with following data:\n");
+        printf("LOG: latest_item: `%s`\n", latest_item);
+        printf("LOG: found_item: `%s`\n", found_item);
+        printf("LOG: amount_of_chars_allowed: `%i`\n", idx->chars_counter);
+        printf("LOG: amount_of_items_matched: `%i`\n", idx->allowed_chars_counter);
     }
 
     if (!is_empty(found_item))

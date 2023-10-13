@@ -197,6 +197,8 @@ keyfilter_result partial_match_keyfilter_result(char_bool_map *idx)
 
 keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
 {
+    char latest_item[MAX_ITEM_SIZE] = "";
+
     while (true)
     {
         char item[MAX_ITEM_SIZE] = "";
@@ -225,6 +227,8 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
             {
                 return invalid_item_keyfilter_result(idx);
             }
+
+            strcpy(latest_item, item);
         }
         else if (match_result == FullMatch)
         {
@@ -235,6 +239,10 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
     if (idx->chars_counter == 0)
     {
         return no_match_keyfilter_result(idx);
+    }
+    else if (idx->chars_counter == 1)
+    {
+        return full_match_keyfilter_result(idx, latest_item);
     }
 
     return partial_match_keyfilter_result(idx);

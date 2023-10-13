@@ -23,13 +23,13 @@ bool logging_enabled()
 typedef struct char_bool_map
 {
     char index[BOOL_MAP_NODES];
-    int amount_of_true;
+    int chars_counter;
 } char_bool_map;
 
 char_bool_map new_char_bool_map()
 {
     char_bool_map chars_idx;
-    chars_idx.amount_of_true = 0;
+    chars_idx.chars_counter = 0;
 
     for (int i = 0; i < BOOL_MAP_NODES; i++)
     {
@@ -46,14 +46,23 @@ bool allow_char(char_bool_map *idx, char c)
         return false;
     }
 
+    if (logging_enabled())
+    {
+        printf("DEBUG: Attemting to allow char %c(%i).\n", c, c);
+    }
+
     int node_idx = c / BOOL_MAP_NODE_SIZE;
     int char_pos = 1 << (c % BOOL_MAP_NODE_SIZE);
 
-    bool is_char_allowed = (idx->index[char_pos] & node_idx) == node_idx;
+    bool is_char_allowed = (idx->index[node_idx] & char_pos) == char_pos;
     if (!is_char_allowed)
     {
+        if (logging_enabled())
+        {
+            printf("DEBUG: Setting char %c(%i) as allowed.\n", c, c);
+        }
         idx->index[node_idx] |= char_pos;
-        idx->amount_of_true++;
+        idx->chars_counter++;
     }
 
     return true;
@@ -73,7 +82,7 @@ void print_next_chars(char_bool_map *idx)
     {
         for (int item_idx = 0; item_idx < BOOL_MAP_NODE_SIZE; item_idx++)
         {
-            if (printed_chars == idx->amount_of_true)
+            if (printed_chars == idx->chars_counter)
             {
                 printf("\n");
                 return;
@@ -223,7 +232,7 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
         }
     }
 
-    if (idx->amount_of_true == 0)
+    if (idx->chars_counter == 0)
     {
         return no_match_keyfilter_result(idx);
     }

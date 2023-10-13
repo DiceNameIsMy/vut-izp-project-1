@@ -198,6 +198,7 @@ keyfilter_result partial_match_keyfilter_result(char_bool_map *idx)
 keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
 {
     char latest_item[MAX_ITEM_SIZE] = "";
+    char found_item[MAX_ITEM_SIZE] = "";
 
     while (true)
     {
@@ -232,11 +233,15 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
         }
         else if (match_result == FullMatch)
         {
-            return full_match_keyfilter_result(idx, item);
+            strcpy(found_item, item);
         }
     }
 
-    if (idx->chars_counter == 0)
+    if (strlen(found_item) != 0)
+    {
+        return full_match_keyfilter_result(idx, found_item);
+    }
+    else if (idx->chars_counter == 0)
     {
         return no_match_keyfilter_result(idx);
     }
@@ -276,6 +281,11 @@ int main(int argc, char *argv[])
     else if (strlen(result.found_item) != 0)
     {
         printf("Found: %s\n", result.found_item);
+
+        if (chars_map.chars_counter != 0)
+        {
+            print_next_chars(&chars_map);
+        }
     }
     else
     {

@@ -66,7 +66,7 @@ char get_node_char(int node_idx, int item_idx)
     return (node_idx * BOOL_MAP_NODE_SIZE) + item_idx;
 }
 
-void print_next_chars(char_bool_map idx)
+void print_next_chars(char_bool_map *idx)
 {
     int printed_chars = 0;
 
@@ -75,14 +75,14 @@ void print_next_chars(char_bool_map idx)
     {
         for (int item_idx = 0; item_idx < BOOL_MAP_NODE_SIZE; item_idx++)
         {
-            if (printed_chars == idx.amount_of_true)
+            if (printed_chars == idx->amount_of_true)
             {
                 printf("\n");
                 return;
             }
 
             int n = 0b0000000000000001 << item_idx;
-            bool should_print = (idx.index[node_idx] & n) == n;
+            bool should_print = (idx->index[node_idx] & n) == n;
 
             if (should_print)
             {
@@ -265,7 +265,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        print_next_chars(chars_map);
+        print_next_chars(&chars_map);
     }
 
     return 0;

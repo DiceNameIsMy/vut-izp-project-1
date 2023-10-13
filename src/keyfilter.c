@@ -11,6 +11,11 @@
 
 #define IsLowercase(c) (c > 96 && c < 123)
 
+bool is_empty(char *string)
+{
+    return strlen(string) == 0;
+}
+
 bool logging_enabled()
 {
     char *logging = getenv("KEYFILTER_LOGGING");
@@ -24,12 +29,14 @@ typedef struct char_bool_map
 {
     char index[BOOL_MAP_NODES];
     int chars_counter;
+    int allowed_chars_counter;
 } char_bool_map;
 
 char_bool_map new_char_bool_map()
 {
     char_bool_map chars_idx;
     chars_idx.chars_counter = 0;
+    chars_idx.allowed_chars_counter = 0;
 
     for (int i = 0; i < BOOL_MAP_NODES; i++)
     {
@@ -64,6 +71,15 @@ bool allow_char(char_bool_map *idx, char c)
         idx->index[node_idx] |= char_pos;
         idx->chars_counter++;
     }
+    else
+    {
+        if (logging_enabled())
+        {
+            printf("DEBUG: Char `%c` is already allowed.\n", c);
+        }
+    }
+
+    idx->allowed_chars_counter++;
 
     return true;
 }
@@ -164,34 +180,35 @@ read_item_result read_item(char *item, FILE *stream)
 
 typedef struct keyfilter_result
 {
-    bool has_invalid_item;
+    char invalid_item[MAX_ITEM_SIZE];
     bool no_results;
     char found_item[MAX_ITEM_SIZE];
     char_bool_map *next_chars_bool_map;
 } keyfilter_result;
 
-keyfilter_result invalid_item_keyfilter_result(char_bool_map *idx)
+keyfilter_result invalid_item_keyfilter_result(char_bool_map *idx, char invalid_item[MAX_ITEM_SIZE])
 {
-    keyfilter_result result = {true, true, "", idx};
+    keyfilter_result result = {"", true, "", idx};
+    strcpy(result.invalid_item, invalid_item);
     return result;
 }
 
 keyfilter_result no_match_keyfilter_result(char_bool_map *idx)
 {
-    keyfilter_result result = {false, true, "", idx};
+    keyfilter_result result = {"", true, "", idx};
     return result;
 }
 
 keyfilter_result full_match_keyfilter_result(char_bool_map *idx, char item[MAX_ITEM_SIZE])
 {
-    keyfilter_result result = {false, false, "", idx};
+    keyfilter_result result = {"", false, "", idx};
     strcpy(result.found_item, item);
     return result;
 }
 
 keyfilter_result partial_match_keyfilter_result(char_bool_map *idx)
 {
-    keyfilter_result result = {false, false, "", idx};
+    keyfilter_result result = {"", false, "", idx};
     return result;
 }
 
@@ -207,7 +224,7 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
 
         if (item_result.item_too_long)
         {
-            return invalid_item_keyfilter_result(idx);
+            return invalid_item_keyfilter_result(idx, item);
         }
         if (item_result.read_all_items)
         {
@@ -226,7 +243,7 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
             bool valid_char = allow_char(idx, toupper(next_letter));
             if (!valid_char)
             {
-                return invalid_item_keyfilter_result(idx);
+                return invalid_item_keyfilter_result(idx, item);
             }
 
             strcpy(latest_item, item);
@@ -237,7 +254,17 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
         }
     }
 
-    if (strlen(found_item) != 0)
+    if (logging_enabled())
+    {
+        printf("DEBUG: Finished filtering\n");
+        printf("DEBUG: Returning results with following data:\n");
+        printf("DEBUG: latest_item: `%s`\n", latest_item);
+        printf("DEBUG: found_item: `%s`\n", found_item);
+        printf("DEBUG: amount_of_chars_allowed: `%i`\n", idx->chars_counter);
+        printf("DEBUG: amount_of_items_matched: `%i`\n", idx->allowed_chars_counter);
+    }
+
+    if (!is_empty(found_item))
     {
         return full_match_keyfilter_result(idx, found_item);
     }
@@ -245,7 +272,7 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
     {
         return no_match_keyfilter_result(idx);
     }
-    else if (idx->chars_counter == 1)
+    else if (idx->chars_counter == 1 && idx->allowed_chars_counter == 1)
     {
         return full_match_keyfilter_result(idx, latest_item);
     }
@@ -270,7 +297,7 @@ int main(int argc, char *argv[])
     char_bool_map chars_map = new_char_bool_map();
     keyfilter_result result = keyfilter(&chars_map, key, stdin);
 
-    if (result.has_invalid_item)
+    if (!is_empty(result.invalid_item))
     {
         printf("Some of the items is invalid.\n");
     }
@@ -278,7 +305,7 @@ int main(int argc, char *argv[])
     {
         printf("Not found\n");
     }
-    else if (strlen(result.found_item) != 0)
+    else if (!is_empty(result.found_item))
     {
         printf("Found: %s\n", result.found_item);
 

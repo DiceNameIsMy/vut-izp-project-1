@@ -315,6 +315,31 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
     return partial_match_keyfilter_result(idx);
 }
 
+void print_keyfilter_result(keyfilter_result *result)
+{
+    if (!is_empty(result->invalid_item))
+    {
+        printf("Received an invalid item `%s`.\n", result->invalid_item);
+    }
+    else if (result->no_results)
+    {
+        printf("Not found\n");
+    }
+    else if (!is_empty(result->found_item))
+    {
+        printf("Found: %s\n", result->found_item);
+
+        if (has_partial_matches(result->next_chars_bool_map))
+        {
+            print_next_chars(result->next_chars_bool_map);
+        }
+    }
+    else
+    {
+        print_next_chars(result->next_chars_bool_map);
+    }
+}
+
 int main(int argc, char *argv[])
 {
     if (argc > 2)
@@ -332,27 +357,7 @@ int main(int argc, char *argv[])
     char_bool_map chars_map = new_char_bool_map();
     keyfilter_result result = keyfilter(&chars_map, key, stdin);
 
-    if (!is_empty(result.invalid_item))
-    {
-        printf("Received an invalid item `%s`.\n", result.invalid_item);
-    }
-    else if (result.no_results)
-    {
-        printf("Not found\n");
-    }
-    else if (!is_empty(result.found_item))
-    {
-        printf("Found: %s\n", result.found_item);
-
-        if (has_partial_matches(&chars_map))
-        {
-            print_next_chars(&chars_map);
-        }
-    }
-    else
-    {
-        print_next_chars(&chars_map);
-    }
+    print_keyfilter_result(&result);
 
     return 0;
 }

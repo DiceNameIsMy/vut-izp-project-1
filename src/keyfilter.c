@@ -139,7 +139,7 @@ void print_next_chars(char_bool_map *idx)
 
 bool has_partial_matches(char_bool_map *idx)
 {
-    return idx->chars_counter != 0;
+    return idx->matched_items_counter != 0;
 }
 
 bool has_multiple_matched_items(char_bool_map *idx)

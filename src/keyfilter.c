@@ -29,14 +29,14 @@ typedef struct char_bool_map
 {
     char index[BOOL_MAP_NODES];
     int chars_counter;
-    int allowed_chars_counter;
+    int matched_items_counter;
 } char_bool_map;
 
 char_bool_map new_char_bool_map()
 {
     char_bool_map chars_idx;
     chars_idx.chars_counter = 0;
-    chars_idx.allowed_chars_counter = 0;
+    chars_idx.matched_items_counter = 0;
 
     for (int i = 0; i < BOOL_MAP_NODES; i++)
     {
@@ -88,7 +88,7 @@ bool allow_char(char_bool_map *idx, char c)
         }
     }
 
-    idx->allowed_chars_counter++;
+    idx->matched_items_counter++;
 
     return true;
 }
@@ -128,6 +128,16 @@ void print_next_chars(char_bool_map *idx)
             return;
         }
     }
+}
+
+bool has_partial_matches(char_bool_map *idx)
+{
+    return idx->chars_counter != 0;
+}
+
+bool has_single_partial_match(char_bool_map *idx)
+{
+    return idx->matched_items_counter == 1;
 }
 
 typedef enum compare_result
@@ -275,18 +285,18 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
         printf("LOG: latest_item: `%s`\n", latest_item);
         printf("LOG: found_item: `%s`\n", found_item);
         printf("LOG: amount_of_chars_allowed: `%i`\n", idx->chars_counter);
-        printf("LOG: amount_of_items_matched: `%i`\n", idx->allowed_chars_counter);
+        printf("LOG: amount_of_items_matched: `%i`\n", idx->matched_items_counter);
     }
 
     if (!is_empty(found_item))
     {
         return full_match_keyfilter_result(idx, found_item);
     }
-    else if (idx->chars_counter == 0)
+    else if (!has_partial_matches(idx))
     {
         return no_match_keyfilter_result(idx);
     }
-    else if (idx->chars_counter == 1 && idx->allowed_chars_counter == 1)
+    else if (has_single_partial_match(idx))
     {
         return full_match_keyfilter_result(idx, latest_item);
     }
@@ -323,7 +333,7 @@ int main(int argc, char *argv[])
     {
         printf("Found: %s\n", result.found_item);
 
-        if (chars_map.chars_counter > 1)
+        if (has_partial_matches(&chars_map))
         {
             print_next_chars(&chars_map);
         }

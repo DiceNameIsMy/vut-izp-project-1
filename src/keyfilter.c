@@ -16,6 +16,11 @@ bool is_empty(char *string)
     return strlen(string) == 0;
 }
 
+bool is_printable(char c)
+{
+    return (int)c > 32 || (int)c < 127;
+}
+
 bool logging_enabled()
 {
     char *logging = getenv("KEYFILTER_LOGGING");
@@ -24,7 +29,14 @@ bool logging_enabled()
 
 // Stores which characters can be unputted next.
 // Each bit in the array of nodes represents a character
-// with values: 0 - can't, and 1 - can be included
+// with values:
+// 0 - can't be inputted next
+// 1 - can be inputted next
+//
+// I do acknowledge that this structure can store 256 chars,
+// even though only 127 exists and only ~96 of them are printable,
+// but since it does not increase the algorithminc complexity of the solution
+// (it's a constant memory usage), I decided to keep it simple.
 typedef struct char_bool_map
 {
     char index[BOOL_MAP_NODES];
@@ -44,11 +56,6 @@ char_bool_map new_char_bool_map()
     }
 
     return chars_idx;
-}
-
-bool is_printable(char c)
-{
-    return (int)c > 32 || (int)c < 127;
 }
 
 bool allow_char(char_bool_map *idx, char c)
@@ -202,6 +209,10 @@ read_item_result read_item(char *item, FILE *stream)
     return result;
 }
 
+// Represents a result of using a keyfilter.
+//
+// I have decided to keep the result resolvement separate from printing it to
+// them to keep functions more focused on doing their single responsibility.
 typedef struct keyfilter_result
 {
     char invalid_item[MAX_ITEM_SIZE];

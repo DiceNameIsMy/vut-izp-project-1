@@ -151,7 +151,7 @@ compare_result compare_to_key(char *key, char *value)
 {
     if (logging_enabled())
     {
-        printf("LOG: Comparing key `%s` to item `%s` with first letter `%i`\n", key, value, value[0]);
+        printf("LOG: Comparing key `%s` to item `%s` with first char `%i`\n", key, value, value[0]);
     }
 
     int key_len = strlen(key);
@@ -184,11 +184,11 @@ read_item_result read_item(char *item, FILE *stream)
     int next_char_idx = 0;
 
     char c;
-    read_item_result result;
+    read_item_result result = {.item_too_long = false, .read_all_items = false};
 
     while ((c = fgetc(stream)) != ITEM_SEPARATOR)
     {
-        item[next_char_idx] = c;
+        item[next_char_idx] = toupper(c);
 
         result.read_all_items = (c == EOF);
         result.item_too_long = (next_char_idx == MAX_ITEM_SIZE);
@@ -263,8 +263,8 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
         }
         else if (match_result == PartialMatch)
         {
-            char next_letter = item[strlen(key)];
-            bool valid_char = allow_char(idx, toupper(next_letter));
+            char next_char = item[strlen(key)];
+            bool valid_char = allow_char(idx, toupper(next_char));
             if (!valid_char)
             {
                 return invalid_item_keyfilter_result(idx, item);

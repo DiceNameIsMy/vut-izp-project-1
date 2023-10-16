@@ -324,7 +324,7 @@ int main(int argc, char *argv[])
 {
     if (argc > 2)
     {
-        printf("No more than 1 argument must be provided. It must be a key to make a search for.\n");
+        fprintf(stderr, "No more than 1 argument must be provided. It must be a key to make a search for.\n");
         return 1;
     }
 

@@ -275,10 +275,10 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
     {
         printf("LOG: Finished filtering\n");
         printf("LOG: Returning results with following data:\n");
-        printf("LOG: latest_item: `%s`\n", latest_partial_match_item);
+        printf("LOG: latest_partial_match_item: `%s`\n", latest_partial_match_item);
         printf("LOG: found_item: `%s`\n", found_item);
-        printf("LOG: amount_of_chars_allowed: `%i`\n", idx->chars_counter);
-        printf("LOG: amount_of_items_matched: `%i`\n", idx->matched_items_counter);
+        printf("LOG: chars_counter: `%i`\n", idx->chars_counter);
+        printf("LOG: matched_items_counter: `%i`\n", idx->matched_items_counter);
     }
 
     keyfilter_result result = {.invalid_item = "", .found_item = "", .next_chars_bool_map = idx};
@@ -298,19 +298,23 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
 void print_keyfilter_result(keyfilter_result *result)
 {
     bool full_match = !is_empty(result->found_item);
-    bool partial_match = has_partial_matches(result->next_chars_bool_map);
+    bool partial_matches = has_partial_matches(result->next_chars_bool_map);
 
     if (full_match)
     {
         printf("Found: %s\n", result->found_item);
-    }
 
-    if (partial_match)
+        bool multiple_partial_matches = has_multiple_matched_items(result->next_chars_bool_map);
+        if (multiple_partial_matches)
+        {
+            print_next_chars(result->next_chars_bool_map);
+        }
+    }
+    else if (partial_matches)
     {
         print_next_chars(result->next_chars_bool_map);
     }
-
-    if (!full_match && !partial_match)
+    else
     {
         printf("Not found\n");
     }

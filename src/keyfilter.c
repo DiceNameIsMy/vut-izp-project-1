@@ -217,7 +217,7 @@ read_item_result read_item(char *item, FILE *stream)
 // Represents a result of using a keyfilter.
 //
 // I have decided to keep the result resolvement separate from printing it to
-// them to keep functions more focused on doing their single responsibility.
+// them to keep functions with a single responsibility.
 typedef struct keyfilter_result
 {
     char invalid_item[MAX_ITEM_SIZE];
@@ -241,33 +241,28 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
     while (true)
     {
         read_item_result item_result = read_item(&current_item[0], stream);
-
         if (item_result.item_too_long)
             return invalid_item_keyfilter_result(idx, current_item);
-
         if (item_result.read_all_items)
             break;
 
         compare_result match_result = compare_to_key(key, current_item);
-
-        if (match_result == NoMatch)
+        switch (match_result)
         {
+        case NoMatch:
             continue;
-        }
-        else if (match_result == PartialMatch)
-        {
+        case FullMatch:
+            strcpy(found_item, current_item);
+            break;
+        case PartialMatch:
             char next_char = current_item[strlen(key)];
-            bool valid_char = allow_char(idx, toupper(next_char));
-            if (!valid_char)
+            bool char_is_valid = allow_char(idx, toupper(next_char));
+            if (!char_is_valid)
             {
                 return invalid_item_keyfilter_result(idx, current_item);
             }
-
             strcpy(latest_partial_match_item, current_item);
-        }
-        else if (match_result == FullMatch)
-        {
-            strcpy(found_item, current_item);
+            break;
         }
     }
 

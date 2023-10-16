@@ -327,6 +327,12 @@ int main(int argc, char *argv[])
     char key[MAX_ITEM_SIZE] = "";
     if (argc == 2)
     {
+        if (strlen(argv[1]) > MAX_ITEM_SIZE)
+        {
+            fprintf(stderr, "Key `%s` is too long.", argv[1]);
+            return 1;
+        }
+
         strcpy(key, argv[1]);
     }
 

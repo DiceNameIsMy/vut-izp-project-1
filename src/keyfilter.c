@@ -232,45 +232,23 @@ keyfilter_result invalid_item_keyfilter_result(char_bool_map *idx, char invalid_
     return result;
 }
 
-keyfilter_result no_match_keyfilter_result(char_bool_map *idx)
-{
-    keyfilter_result result = {"", "", idx};
-    return result;
-}
-
-keyfilter_result full_match_keyfilter_result(char_bool_map *idx, char item[MAX_ITEM_SIZE])
-{
-    keyfilter_result result = {"", "", idx};
-    strcpy(result.found_item, item);
-    return result;
-}
-
-keyfilter_result partial_match_keyfilter_result(char_bool_map *idx)
-{
-    keyfilter_result result = {"", "", idx};
-    return result;
-}
-
 keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
 {
-    char latest_partial_match[MAX_ITEM_SIZE] = "";
+    char latest_partial_match_item[MAX_ITEM_SIZE] = "";
     char found_item[MAX_ITEM_SIZE] = "";
+    char current_item[MAX_ITEM_SIZE] = "";
 
     while (true)
     {
-        char item[MAX_ITEM_SIZE] = "";
-        read_item_result item_result = read_item(&item[0], stream);
+        read_item_result item_result = read_item(&current_item[0], stream);
 
         if (item_result.item_too_long)
-        {
-            return invalid_item_keyfilter_result(idx, item);
-        }
-        if (item_result.read_all_items)
-        {
-            break;
-        }
+            return invalid_item_keyfilter_result(idx, current_item);
 
-        compare_result match_result = compare_to_key(key, item);
+        if (item_result.read_all_items)
+            break;
+
+        compare_result match_result = compare_to_key(key, current_item);
 
         if (match_result == NoMatch)
         {
@@ -278,18 +256,18 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
         }
         else if (match_result == PartialMatch)
         {
-            char next_char = item[strlen(key)];
+            char next_char = current_item[strlen(key)];
             bool valid_char = allow_char(idx, toupper(next_char));
             if (!valid_char)
             {
-                return invalid_item_keyfilter_result(idx, item);
+                return invalid_item_keyfilter_result(idx, current_item);
             }
 
-            strcpy(latest_partial_match, item);
+            strcpy(latest_partial_match_item, current_item);
         }
         else if (match_result == FullMatch)
         {
-            strcpy(found_item, item);
+            strcpy(found_item, current_item);
         }
     }
 
@@ -297,26 +275,24 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
     {
         printf("LOG: Finished filtering\n");
         printf("LOG: Returning results with following data:\n");
-        printf("LOG: latest_item: `%s`\n", latest_partial_match);
+        printf("LOG: latest_item: `%s`\n", latest_partial_match_item);
         printf("LOG: found_item: `%s`\n", found_item);
         printf("LOG: amount_of_chars_allowed: `%i`\n", idx->chars_counter);
         printf("LOG: amount_of_items_matched: `%i`\n", idx->matched_items_counter);
     }
 
+    keyfilter_result result = {.invalid_item = "", .found_item = "", .next_chars_bool_map = idx};
+
     if (!is_empty(found_item))
     {
-        return full_match_keyfilter_result(idx, found_item);
-    }
-    else if (!has_partial_matches(idx))
-    {
-        return no_match_keyfilter_result(idx);
+        strcpy(result.found_item, found_item);
     }
     else if (has_single_partial_match(idx))
     {
-        return full_match_keyfilter_result(idx, latest_partial_match);
+        strcpy(result.found_item, latest_partial_match_item);
     }
 
-    return partial_match_keyfilter_result(idx);
+    return result;
 }
 
 void print_keyfilter_result(keyfilter_result *result)

@@ -221,40 +221,39 @@ read_item_result read_item(char *item, FILE *stream)
 typedef struct keyfilter_result
 {
     char invalid_item[MAX_ITEM_SIZE];
-    bool no_results;
     char found_item[MAX_ITEM_SIZE];
     char_bool_map *next_chars_bool_map;
 } keyfilter_result;
 
 keyfilter_result invalid_item_keyfilter_result(char_bool_map *idx, char invalid_item[MAX_ITEM_SIZE])
 {
-    keyfilter_result result = {"", true, "", idx};
+    keyfilter_result result = {"", "", idx};
     strcpy(result.invalid_item, invalid_item);
     return result;
 }
 
 keyfilter_result no_match_keyfilter_result(char_bool_map *idx)
 {
-    keyfilter_result result = {"", true, "", idx};
+    keyfilter_result result = {"", "", idx};
     return result;
 }
 
 keyfilter_result full_match_keyfilter_result(char_bool_map *idx, char item[MAX_ITEM_SIZE])
 {
-    keyfilter_result result = {"", false, "", idx};
+    keyfilter_result result = {"", "", idx};
     strcpy(result.found_item, item);
     return result;
 }
 
 keyfilter_result partial_match_keyfilter_result(char_bool_map *idx)
 {
-    keyfilter_result result = {"", false, "", idx};
+    keyfilter_result result = {"", "", idx};
     return result;
 }
 
 keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
 {
-    char latest_item[MAX_ITEM_SIZE] = "";
+    char latest_partial_match[MAX_ITEM_SIZE] = "";
     char found_item[MAX_ITEM_SIZE] = "";
 
     while (true)
@@ -286,7 +285,7 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
                 return invalid_item_keyfilter_result(idx, item);
             }
 
-            strcpy(latest_item, item);
+            strcpy(latest_partial_match, item);
         }
         else if (match_result == FullMatch)
         {
@@ -298,7 +297,7 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
     {
         printf("LOG: Finished filtering\n");
         printf("LOG: Returning results with following data:\n");
-        printf("LOG: latest_item: `%s`\n", latest_item);
+        printf("LOG: latest_item: `%s`\n", latest_partial_match);
         printf("LOG: found_item: `%s`\n", found_item);
         printf("LOG: amount_of_chars_allowed: `%i`\n", idx->chars_counter);
         printf("LOG: amount_of_items_matched: `%i`\n", idx->matched_items_counter);
@@ -314,7 +313,7 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
     }
     else if (has_single_partial_match(idx))
     {
-        return full_match_keyfilter_result(idx, latest_item);
+        return full_match_keyfilter_result(idx, latest_partial_match);
     }
 
     return partial_match_keyfilter_result(idx);
@@ -322,22 +321,22 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
 
 void print_keyfilter_result(keyfilter_result *result)
 {
-    if (result->no_results)
-    {
-        printf("Not found\n");
-    }
-    else if (!is_empty(result->found_item))
+    bool full_match = !is_empty(result->found_item);
+    bool partial_match = has_partial_matches(result->next_chars_bool_map);
+
+    if (full_match)
     {
         printf("Found: %s\n", result->found_item);
-
-        if (has_multiple_matched_items(result->next_chars_bool_map))
-        {
-            print_next_chars(result->next_chars_bool_map);
-        }
     }
-    else
+
+    if (partial_match)
     {
         print_next_chars(result->next_chars_bool_map);
+    }
+
+    if (!full_match && !partial_match)
+    {
+        printf("Not found\n");
     }
 }
 

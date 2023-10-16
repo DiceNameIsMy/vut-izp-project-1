@@ -322,11 +322,7 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
 
 void print_keyfilter_result(keyfilter_result *result)
 {
-    if (!is_empty(result->invalid_item))
-    {
-        printf("Received an invalid item `%s`.\n", result->invalid_item);
-    }
-    else if (result->no_results)
+    if (result->no_results)
     {
         printf("Not found\n");
     }
@@ -361,6 +357,12 @@ int main(int argc, char *argv[])
 
     char_bool_map chars_map = new_char_bool_map();
     keyfilter_result result = keyfilter(&chars_map, key, stdin);
+
+    if (!is_empty(result.invalid_item))
+    {
+        fprintf(stderr, "Received an invalid item `%s`.\n", result.invalid_item);
+        return 1;
+    }
 
     print_keyfilter_result(&result);
 

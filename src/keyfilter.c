@@ -247,14 +247,16 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
             break;
 
         compare_result match_result = compare_to_key(key, current_item);
-        switch (match_result)
+        if (match_result == NoMatch)
         {
-        case NoMatch:
             continue;
-        case FullMatch:
+        }
+        else if (match_result == FullMatch)
+        {
             strcpy(found_item, current_item);
-            break;
-        case PartialMatch:
+        }
+        else if (match_result == PartialMatch)
+        {
             char next_char = current_item[strlen(key)];
             bool char_is_valid = allow_char(idx, toupper(next_char));
             if (!char_is_valid)
@@ -262,7 +264,6 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
                 return invalid_item_keyfilter_result(idx, current_item);
             }
             strcpy(latest_partial_match_item, current_item);
-            break;
         }
     }
 

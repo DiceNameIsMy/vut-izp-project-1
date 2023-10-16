@@ -268,8 +268,7 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
 
     if (logging_enabled())
     {
-        printf("LOG: Finished filtering\n");
-        printf("LOG: Returning results with following data:\n");
+        printf("LOG: Finished filtering. Returning results with following data:\n");
         printf("LOG: latest_partial_match_item: `%s`\n", latest_partial_match_item);
         printf("LOG: found_item: `%s`\n", found_item);
         printf("LOG: chars_counter: `%i`\n", idx->chars_counter);

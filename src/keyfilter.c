@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdbool.h>
 
-#define MAX_ITEM_SIZE 100
+#define MAX_ITEM_SIZE 101
 #define ITEM_SEPARATOR '\n'
 #define BOOL_MAP_NODES 32
 #define BOOL_MAP_NODE_SIZE (int)(8 * sizeof(char))
@@ -109,7 +109,7 @@ void print_node_chars(char_bool_map *idx, int node_idx, int *print_counter)
 {
     for (int item_idx = 0; item_idx < BOOL_MAP_NODE_SIZE; item_idx++)
     {
-        int n = 0b0000000000000001 << item_idx;
+        int n = 0b00000001 << item_idx;
         bool should_print = (idx->index[node_idx] & n) == n;
 
         if (should_print)
@@ -326,7 +326,8 @@ int main(int argc, char *argv[])
     char key[MAX_ITEM_SIZE] = "";
     if (argc == 2)
     {
-        if (strlen(argv[1]) > MAX_ITEM_SIZE)
+        // -1 to account for the \0 sign
+        if (strlen(argv[1]) > MAX_ITEM_SIZE - 1)
         {
             fprintf(stderr, "Key `%s` is too long.", argv[1]);
             return 1;

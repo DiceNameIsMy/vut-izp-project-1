@@ -215,9 +215,6 @@ read_item_result read_item(char *item, FILE *stream)
 }
 
 // Represents a result of using a keyfilter.
-//
-// I have decided to keep the result resolvement separate from printing it to
-// them to keep functions with a single responsibility.
 typedef struct keyfilter_result
 {
     char invalid_item[MAX_ITEM_SIZE];
@@ -290,6 +287,8 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
     return result;
 }
 
+// I have decided to keep the result resolvement separate from
+// printing it to keep functions with a single responsibility.
 void print_keyfilter_result(keyfilter_result *result)
 {
     bool full_match = !is_empty(result->found_item);

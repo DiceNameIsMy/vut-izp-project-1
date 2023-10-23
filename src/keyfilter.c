@@ -208,21 +208,22 @@ read_item_result read_item(char *item, FILE *stream)
 
     while ((c = fgetc(stream)) != ITEM_SEPARATOR)
     {
-        item[next_char_idx] = c;
-
         if (c == EOF)
         {
             result.read_all_items = true;
-            return result;
+            break;
         }
         else if (next_char_idx == (ITEM_ARRAY_SIZE - 1))
         {
             result.item_too_long = true;
-            return result;
+            break;
         }
 
+        item[next_char_idx] = c;
         next_char_idx++;
     }
+    item[next_char_idx] = '\0';
+
     return result;
 }
 
@@ -245,7 +246,7 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
 {
     char latest_partial_match_item[ITEM_ARRAY_SIZE] = "";
     char found_item[ITEM_ARRAY_SIZE] = "";
-    char current_item[ITEM_ARRAY_SIZE] = "";
+    char current_item[ITEM_ARRAY_SIZE];
 
     while (true)
     {

@@ -4,8 +4,8 @@
 #include <string.h>
 #include <stdbool.h>
 
-#define MAX_ITEM_SIZE 100
-#define MAX_ITEM_ARRAY_SIZE MAX_ITEM_SIZE + 1
+#define ITEM_SIZE 100
+#define ITEM_ARRAY_SIZE ITEM_SIZE + 1
 #define ITEM_SEPARATOR '\n'
 #define BOOL_MAP_NODES 32
 #define BOOL_MAP_NODE_SIZE (int)(8 * sizeof(char))
@@ -38,7 +38,7 @@ bool logging_enabled()
 // even though only 127 exists and only ~96 of them are printable,
 // but since it does not increase the algorithminc complexity of the solution
 // (it's a constant memory usage), I decided to keep it simple.
-typedef struct char_bool_map
+typedef struct
 {
     char index[BOOL_MAP_NODES];
     int chars_counter;
@@ -64,16 +64,13 @@ bool allow_char(char_bool_map *idx, char c)
     if (!is_printable(c))
     {
         if (logging_enabled())
-        {
             printf("LOG: Received an invalid char `%c(%i)`\n", c, c);
-        }
+
         return false;
     }
 
     if (logging_enabled())
-    {
         printf("LOG: Attemting to allow char %c(%i).\n", c, c);
-    }
 
     int node_idx = c / BOOL_MAP_NODE_SIZE;
     int char_pos = 1 << (c % BOOL_MAP_NODE_SIZE);
@@ -82,18 +79,15 @@ bool allow_char(char_bool_map *idx, char c)
     if (!is_char_allowed)
     {
         if (logging_enabled())
-        {
             printf("LOG: Setting char %c(%i) as allowed.\n", c, c);
-        }
+
         idx->index[node_idx] |= char_pos;
         idx->chars_counter++;
     }
     else
     {
         if (logging_enabled())
-        {
             printf("LOG: Char `%c` is already allowed.\n", c);
-        }
     }
 
     idx->matched_items_counter++;
@@ -121,16 +115,16 @@ void print_node_chars(char_bool_map *idx, int node_idx, int *print_counter)
     }
 }
 
-void print_next_chars(char_bool_map *idx)
+void print_chars(char_bool_map *idx)
 {
-    int printed_chars_counter = 0;
+    int printed_chars = 0;
 
     printf("Enable: ");
     for (int node_idx = 0; node_idx < BOOL_MAP_NODES; node_idx++)
     {
-        print_node_chars(idx, node_idx, &printed_chars_counter);
+        print_node_chars(idx, node_idx, &printed_chars);
 
-        if (printed_chars_counter == idx->chars_counter)
+        if (printed_chars == idx->chars_counter)
         {
             printf("\n");
             return;
@@ -163,9 +157,7 @@ typedef enum compare_result
 compare_result compare_to_key(char *key, char *value)
 {
     if (logging_enabled())
-    {
         printf("LOG: Comparing key `%s` to item `%s` with first char `%i`\n", key, value, value[0]);
-    }
 
     int key_len = strlen(key);
 
@@ -208,7 +200,7 @@ read_item_result read_item(char *item, FILE *stream)
             result.read_all_items = true;
             return result;
         }
-        else if (next_char_idx == (MAX_ITEM_ARRAY_SIZE - 1))
+        else if (next_char_idx == (ITEM_ARRAY_SIZE - 1))
         {
             result.item_too_long = true;
             return result;
@@ -222,12 +214,12 @@ read_item_result read_item(char *item, FILE *stream)
 // Represents a result of using a keyfilter.
 typedef struct keyfilter_result
 {
-    char invalid_item[MAX_ITEM_ARRAY_SIZE];
-    char found_item[MAX_ITEM_ARRAY_SIZE];
+    char invalid_item[ITEM_ARRAY_SIZE];
+    char found_item[ITEM_ARRAY_SIZE];
     char_bool_map *next_chars_bool_map;
 } keyfilter_result;
 
-keyfilter_result invalid_item_keyfilter_result(char_bool_map *idx, char invalid_item[MAX_ITEM_ARRAY_SIZE])
+keyfilter_result invalid_item_keyfilter_result(char_bool_map *idx, char invalid_item[ITEM_ARRAY_SIZE])
 {
     keyfilter_result result = {"", "", idx};
     strcpy(result.invalid_item, invalid_item);
@@ -236,9 +228,9 @@ keyfilter_result invalid_item_keyfilter_result(char_bool_map *idx, char invalid_
 
 keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
 {
-    char latest_partial_match_item[MAX_ITEM_ARRAY_SIZE] = "";
-    char found_item[MAX_ITEM_ARRAY_SIZE] = "";
-    char current_item[MAX_ITEM_ARRAY_SIZE] = "";
+    char latest_partial_match_item[ITEM_ARRAY_SIZE] = "";
+    char found_item[ITEM_ARRAY_SIZE] = "";
+    char current_item[ITEM_ARRAY_SIZE] = "";
 
     while (true)
     {
@@ -307,12 +299,12 @@ void print_keyfilter_result(keyfilter_result *result)
         bool multiple_partial_matches = has_multiple_matched_items(result->next_chars_bool_map);
         if (multiple_partial_matches)
         {
-            print_next_chars(result->next_chars_bool_map);
+            print_chars(result->next_chars_bool_map);
         }
     }
     else if (partial_matches)
     {
-        print_next_chars(result->next_chars_bool_map);
+        print_chars(result->next_chars_bool_map);
     }
     else
     {
@@ -328,10 +320,10 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    char key[MAX_ITEM_ARRAY_SIZE] = "";
+    char key[ITEM_ARRAY_SIZE] = "";
     if (argc == 2)
     {
-        if (strlen(argv[1]) > MAX_ITEM_SIZE)
+        if (strlen(argv[1]) > ITEM_SIZE)
         {
             fprintf(stderr, "Key `%s` is too long.", argv[1]);
             return 1;

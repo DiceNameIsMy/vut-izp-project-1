@@ -4,7 +4,8 @@
 #include <string.h>
 #include <stdbool.h>
 
-#define MAX_ITEM_SIZE 101
+#define MAX_ITEM_SIZE 100
+#define MAX_ITEM_ARRAY_SIZE MAX_ITEM_SIZE + 1
 #define ITEM_SEPARATOR '\n'
 #define BOOL_MAP_NODES 32
 #define BOOL_MAP_NODE_SIZE (int)(8 * sizeof(char))
@@ -202,10 +203,14 @@ read_item_result read_item(char *item, FILE *stream)
     {
         item[next_char_idx] = toupper(c);
 
-        result.read_all_items = (c == EOF);
-        result.item_too_long = (next_char_idx == MAX_ITEM_SIZE);
-        if (result.read_all_items || result.item_too_long)
+        if (c == EOF)
         {
+            result.read_all_items = true;
+            return result;
+        }
+        else if (next_char_idx == (MAX_ITEM_ARRAY_SIZE - 1))
+        {
+            result.item_too_long = true;
             return result;
         }
 
@@ -217,12 +222,12 @@ read_item_result read_item(char *item, FILE *stream)
 // Represents a result of using a keyfilter.
 typedef struct keyfilter_result
 {
-    char invalid_item[MAX_ITEM_SIZE];
-    char found_item[MAX_ITEM_SIZE];
+    char invalid_item[MAX_ITEM_ARRAY_SIZE];
+    char found_item[MAX_ITEM_ARRAY_SIZE];
     char_bool_map *next_chars_bool_map;
 } keyfilter_result;
 
-keyfilter_result invalid_item_keyfilter_result(char_bool_map *idx, char invalid_item[MAX_ITEM_SIZE])
+keyfilter_result invalid_item_keyfilter_result(char_bool_map *idx, char invalid_item[MAX_ITEM_ARRAY_SIZE])
 {
     keyfilter_result result = {"", "", idx};
     strcpy(result.invalid_item, invalid_item);
@@ -231,13 +236,14 @@ keyfilter_result invalid_item_keyfilter_result(char_bool_map *idx, char invalid_
 
 keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
 {
-    char latest_partial_match_item[MAX_ITEM_SIZE] = "";
-    char found_item[MAX_ITEM_SIZE] = "";
-    char current_item[MAX_ITEM_SIZE] = "";
+    char latest_partial_match_item[MAX_ITEM_ARRAY_SIZE] = "";
+    char found_item[MAX_ITEM_ARRAY_SIZE] = "";
+    char current_item[MAX_ITEM_ARRAY_SIZE] = "";
 
     while (true)
     {
         read_item_result item_result = read_item(&current_item[0], stream);
+
         if (item_result.item_too_long)
             return invalid_item_keyfilter_result(idx, current_item);
         if (item_result.read_all_items)
@@ -322,11 +328,10 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    char key[MAX_ITEM_SIZE] = "";
+    char key[MAX_ITEM_ARRAY_SIZE] = "";
     if (argc == 2)
     {
-        // -1 to account for the \0 sign
-        if (strlen(argv[1]) > MAX_ITEM_SIZE - 1)
+        if (strlen(argv[1]) > MAX_ITEM_SIZE)
         {
             fprintf(stderr, "Key `%s` is too long.", argv[1]);
             return 1;

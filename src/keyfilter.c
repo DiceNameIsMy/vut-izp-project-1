@@ -100,16 +100,31 @@ char get_char_from_bool_map(int node_idx, int item_idx)
     return (node_idx * BOOL_MAP_NODE_SIZE) + item_idx;
 }
 
+void print_found_item(char item[ITEM_ARRAY_SIZE])
+{
+    char upper_item[100];
+    strcpy(upper_item, item);
+
+    for (int i = 0; i < (int)strlen(upper_item); i++)
+    {
+        upper_item[i] = toupper(upper_item[i]);
+    }
+
+    printf("Found: %s\n", upper_item);
+}
+
 void print_node_chars(char_bool_map *idx, int node_idx, int *print_counter)
 {
-    for (int item_idx = 0; item_idx < BOOL_MAP_NODE_SIZE; item_idx++)
+    for (int shift = 0; shift < BOOL_MAP_NODE_SIZE; shift++)
     {
-        int n = 0b00000001 << item_idx;
-        bool should_print = (idx->index[node_idx] & n) == n;
+        int char_pos = 0b00000001 << shift;
+        bool should_print = (idx->index[node_idx] & char_pos) == char_pos;
 
         if (should_print)
         {
-            printf("%c", get_char_from_bool_map(node_idx, item_idx));
+            int char_modulo = shift;
+            char c = get_char_from_bool_map(node_idx, char_modulo);
+            printf("%c", toupper(c));
             (*print_counter)++;
         }
     }
@@ -193,7 +208,7 @@ read_item_result read_item(char *item, FILE *stream)
 
     while ((c = fgetc(stream)) != ITEM_SEPARATOR)
     {
-        item[next_char_idx] = toupper(c);
+        item[next_char_idx] = c;
 
         if (c == EOF)
         {
@@ -294,10 +309,9 @@ void print_keyfilter_result(keyfilter_result *result)
 
     if (full_match)
     {
-        printf("Found: %s\n", result->found_item);
+        print_found_item(result->found_item);
 
-        bool multiple_partial_matches = has_multiple_matched_items(result->next_chars_bool_map);
-        if (multiple_partial_matches)
+        if (result->next_chars_bool_map->matched_items_counter > 1)
         {
             print_chars(result->next_chars_bool_map);
         }

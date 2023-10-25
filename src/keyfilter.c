@@ -1,3 +1,5 @@
+#define NDEBUG
+
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +13,12 @@
 #define BOOL_MAP_NODE_SIZE (int)(8 * sizeof(char))
 
 #define IsLowercase(c) (c > 96 && c < 123)
+
+#ifndef NDEBUG
+#define loginfo(s, ...) fprintf(stderr, __FILE__ ":%u: " s "\n", __LINE__, __VA_ARGS__)
+#else
+#define loginfo(s, ...)
+#endif
 
 bool is_empty(char *string)
 {
@@ -63,33 +71,25 @@ bool allow_char(char_bool_map *idx, char c)
 {
     if (!is_printable(c))
     {
-        if (logging_enabled())
-            printf("LOG: Received an invalid char `%c(%i)`\n", c, c);
-
+        loginfo("Received an invalid char `%c(%i)`", c, c);
         return false;
     }
 
-    if (logging_enabled())
-        printf("LOG: Attemting to allow char %c(%i).\n", c, c);
-
+    loginfo("Attemting to allow char %c(%i)", c, c);
     int node_idx = c / BOOL_MAP_NODE_SIZE;
     int char_pos = 1 << (c % BOOL_MAP_NODE_SIZE);
 
     bool is_char_allowed = (idx->index[node_idx] & char_pos) == char_pos;
     if (!is_char_allowed)
     {
-        if (logging_enabled())
-            printf("LOG: Setting char %c(%i) as allowed.\n", c, c);
-
+        loginfo("Setting char %c(%i) as allowed", c, c);
         idx->index[node_idx] |= char_pos;
         idx->chars_counter++;
     }
     else
     {
-        if (logging_enabled())
-            printf("LOG: Char `%c` is already allowed.\n", c);
+        loginfo("Char `%c` is already allowed", c);
     }
-
     idx->matched_items_counter++;
 
     return true;
@@ -171,9 +171,7 @@ typedef enum compare_result
 
 compare_result compare_to_key(char *key, char *value)
 {
-    if (logging_enabled())
-        printf("LOG: Comparing key `%s` to item `%s` with first char `%i`\n", key, value, value[0]);
-
+    loginfo("Comparing key `%s` to item `%s` with first char `%i`", key, value, value[0]);
     int key_len = strlen(key);
 
     for (int char_idx = 0; char_idx < key_len; char_idx++)
@@ -278,14 +276,10 @@ keyfilter_result keyfilter(char_bool_map *idx, char *key, FILE *stream)
         }
     }
 
-    if (logging_enabled())
-    {
-        printf("LOG: Finished filtering. Returning results with following data:\n");
-        printf("LOG: latest_partial_match_item: `%s`\n", latest_partial_match_item);
-        printf("LOG: found_item: `%s`\n", found_item);
-        printf("LOG: chars_counter: `%i`\n", idx->chars_counter);
-        printf("LOG: matched_items_counter: `%i`\n", idx->matched_items_counter);
-    }
+    loginfo("latest_partial_match_item: `%s`", latest_partial_match_item);
+    loginfo("found_item: `%s`", found_item);
+    loginfo("chars_counter: `%i`", idx->chars_counter);
+    loginfo("matched_items_counter: `%i`", idx->matched_items_counter);
 
     keyfilter_result result = {.invalid_item = "", .found_item = "", .next_chars_bool_map = idx};
 
@@ -340,7 +334,7 @@ int main(int argc, char *argv[])
     {
         if (strlen(argv[1]) > ITEM_SIZE)
         {
-            fprintf(stderr, "Key `%s` is too long.", argv[1]);
+            fprintf(stderr, "Key `%s` is too long", argv[1]);
             return 1;
         }
 

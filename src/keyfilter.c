@@ -334,7 +334,7 @@ int main(int argc, char *argv[])
     {
         if (strlen(argv[1]) > ITEM_SIZE)
         {
-            fprintf(stderr, "Key `%s` is too long", argv[1]);
+            fprintf(stderr, "Key `%s` is too long\n", argv[1]);
             return 1;
         }
 
